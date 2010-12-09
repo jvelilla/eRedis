@@ -1,0 +1,100 @@
+Implementation of Redis Commands
+
+COMMAND_NAME  	-> NOT IMPLEMENTED
+/COMMAND_NAME 	-> IMPLEMENTED 
+/*COMMAND_NAME 	-> IMPLEMENTED NOT SUPPORTED 
+/?COMMAND_NAME  -> IMPLEMENTED NOT TESTED
+
+Connection handling
+
+Command 	Parameters 					Description
+/QUIT 		- 						close the connection
+AUTH 		password 					simple password authentication if enabled 
+
+Commands operating on all value types
+
+Command 	Parameters 					Description
+/EXISTS 		key 					test if a key exists
+/DEL 			key 					delete a key
+/TYPE 			key 					return the type of the value stored at key
+/KEYS 			pattern 				return all the keys matching a given pattern
+/RANDOMKEY 		- 					return a random key from the key space
+/RENAME 		oldname newname 			rename the old key in the new one, destroying the newname key if it already exists
+RENAMENX 		oldname newname 			rename the oldname key to newname, if the newname key does not already exist
+/DBSIZE 			- 					return the number of keys in the current db
+/EXPIRE 			- 					set a time to live in seconds on a key
+/*PERSIST 		- 					remove the expire from a key
+/TTL 			- 					get the time to live in seconds of a key
+/SELECT 		index 					Select the DB with the specified index
+/MOVE 			key dbindex 				Move the key from the currently selected DB to the dbindex DB
+/FLUSHDB 		- 					Remove all the keys from the currently selected DB
+/FLUSHALL		- 					Remove all the keys from all the databases
+
+
+
+Commands operating on string values
+
+Command 	Parameters 					Description
+/SET 		key value 					Set a key to a string value
+/GET 		key 						Return the string value of the key
+GETSET 		key value 					Set a key to a string returning the old value of the key
+/MGET 		key1 key2 ... keyN 				Multi-get, return the strings values of the keys
+SETNX 		key value 					Set a key to a string value if the key does not exist
+SETEX 		key time value 					Set+Expire combo command
+/MSET 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation
+MSETNX 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
+INCR 		key 						Increment the integer value of key
+INCRBY 		key integer 					Increment the integer value of key by integer
+DECR 		key 						Decrement the integer value of key
+DECRBY 		key integer 					Decrement the integer value of key by integer
+APPEND 		key value 					Append the specified string to the string stored at key
+SUBSTR 		key start end 					Return a substring of a larger string 
+
+
+
+Commands operating on lists
+
+Command 	Parameters 					Description
+/RPUSH 		key value 					Append an element to the tail of the List value at key
+/LPUSH 		key value 					Append an element to the head of the List value at key
+/LLEN 		key 						Return the length of the List value at key
+/LRANGE 	key start end 					Return a range of elements from the List at key
+/LTRIM 		key start end 					Trim the list at key to the specified range of elements
+/LINDEX 	key index 					Return the element at index position from the List at key
+/LSET 		key index value 				Set a new value as the element at index position of the List at key
+/LREM 		key count value 				Remove the first-N, last-N, or all the elements matching value from the List at key
+/LPOP 		key 						Return and remove (atomically) the first element of the List at key
+/RPOP 		key 						Return and remove (atomically) the last element of the List at key
+/?BLPOP 	key1 key2 ... keyN timeout 			Blocking LPOP
+/?BRPOP 		key1 key2 ... keyN timeout 			Blocking RPOP
+/RPOPLPUSH 	srckey dstkey 					Return and remove (atomically) the last element of the source List stored at srckey and push the same 									element to the destination List stored at dstkey
+
+Commands operating on sets
+
+Command 	Parameters 					Description
+/SADD 		key member 					Add the specified member to the Set value at key
+/SREM 		key member 					Remove the specified member from the Set value at key
+/SPOP 		key 						Remove and return (pop) a random element from the Set value at key
+/SMOVE 		srckey dstkey member 				Move the specified member from one Set to another atomically
+/SCARD 		key 						Return the number of elements (the cardinality) of the Set at key
+/SISMEMBER 	key member 					Test if the specified value is a member of the Set at key
+/SINTER 	key1 key2 ... keyN 				Return the intersection between the Sets stored at key1, key2, ..., keyN
+/SINTERSTORE 	dstkey key1 key2 ... keyN 			Compute the intersection between the Sets stored at key1, key2, ..., keyN, and store the resulting Set 									at dstkey
+/SUNION 	key1 key2 ... keyN 				Return the union between the Sets stored at key1, key2, ..., keyN
+/SUNIONSTORE 	dstkey key1 key2 ... keyN 			Compute the union between the Sets stored at key1, key2, ..., keyN, and store the resulting Set at 									dstkey
+/SDIFF 		key1 key2 ... keyN 				Return the difference between the Set stored at key1 and all the Sets key2, ..., keyN
+/SDIFFSTORE 	dstkey key1 key2 ... keyN 			Compute the difference between the Set key1 and all the Sets key2, ..., keyN, and store the resulting 									Set at dstkey
+/SMEMBERS 	key 						Return all the members of the Set value at key
+/SRANDMEMBER 	key 						Return a random member of the Set value at key 
+
+Connection
+/Socket 
+
+
+
+Improve the API
+Improve the error handling
+Improve contracts
+
+Refactor Basic Clases
+Refactor Test Clases
