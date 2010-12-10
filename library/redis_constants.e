@@ -16,6 +16,11 @@ feature -- Commands
 	MSET_Command		: STRING = "MSET"
 	MSETNX_Command		: STRING = "MSETNX"
 	INCR_Command		: STRING = "INCR"
+	INCRBY_Command		: STRING = "INCRBY"
+	DECR_Command		: STRING = "DECR"
+	DECRBY_Command		: STRING = "DECRBY"
+	APPEND_Command		: STRING = "APPEND"
+	SUBSTR_Command		: STRING = "SUBSTR"
 	Flush_db_command	: STRING = "FLUSHDB"
 	Flush_all_command	: STRING = "FLUSHALL"
 	Exists_command		: STRING = "EXISTS"
@@ -68,7 +73,7 @@ feature -- Commands
 				lset_command,lrem_command,rpop_command,lpop_command,sadd_command,srem_command,spop_command,scard_command,sismember_command,
 				sinter_command,smove_command,sinterstore_command,sunion_command,sunionstore_command,sdiff_command,sdiffstore_command,
 				smembers_command,srandmember_command,blpop_command,brpop_command,rpoplpush_command,randomkey_command,getset_command,setnx_command
-				,setex_command,msetnx_command,incr_command>>
+				,setex_command,msetnx_command,incr_command,incrby_command,decr_command,decrby_command,append_command,substr_command>>
 		end
 
 	TYPE_NONE : STRING = "none"

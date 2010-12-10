@@ -20,6 +20,7 @@ inherit
 
 feature {NONE} -- Events
 
+
 	on_prepare
 			-- <Precursor>
 		do
@@ -35,6 +36,13 @@ feature {NONE} -- Events
 
 feature {NONE} -- implementation
 	redis : REDIS_API
+
+feature -- Conditions
+	test_for_all_not
+		do
+			assert("True", redis.for_all_not_null (<<"a","v">>))
+			assert("False", not redis.for_all_not_null (<<"a",Void>>))
+		end
 
 feature -- String operations
 
@@ -158,73 +166,7 @@ feature -- String operations
 
 
 
-feature -- Redis Common Operations
-	rename_keys_old_and_new_are_differents
-		do
-			redis.set ("oldkey", "value")
-			redis.rename_key ("oldkey","newkey")
-			assert("Expected value", redis.get ("newkey") ~ "value"  )
-		end
-
-	rename_keys_old_and_new_are_equals_should_fail
-		do
-			redis.set ("oldkey", "value")
-			redis.rename_key ("oldkey","oldkey")
-			assert ("not implemented", False)
-		end
-
-	get_the_number_of_key_after_set_should_be_one_more_key
-		local
-			l_number_keys : INTEGER
-		do
-			l_number_keys := redis.db_size
-			redis.set ("nuevaK8", "nuevoV")
-			assert("Expected one more element", (l_number_keys + 1) = redis.db_size)
-			assert ("Expected 1", 1 = redis.del (<<"nuevaK8">>))
-			assert("Expected equal number", (l_number_keys ) = redis.db_size)
-		end
-
-	random_key_void_if_db_is_empty
-		do
-			assert ("Expected void",redis.randomkey = Void)
-		end
-
-	random_key_not_void_if_db_not_is_empty
-		do
-			redis.set ("key1","value1")
-			redis.set ("key3","value2")
-			assert ("Expected not void",redis.randomkey /= Void)
-		end
-
-	get_db_index
-		do
-			redis.select_db (1)
-			assert("Expected 0", 0 = redis.db_size)
-		end
-
-	delete
-		local
-			l_number_keys : INTEGER
-		do
-			l_number_keys := redis.db_size
-			assert("Equal Zero", l_number_keys = 0)
-			redis.set ("key", "value")
-			redis.flush_db
-			l_number_keys := redis.db_size
-			assert("Equal zero", l_number_keys = 0)
-		end
-
-	get_set_return_the_old_value_and_set_a_new_one
-		-- GETSET key value 					
-		-- Set a key to a string returning the old value of the key
-		do
-			redis.set ("key1", "oldvalue")
-			assert("Expected oldvalue", redis.getset("key1","newvalue")~"oldvalue")
-			assert("Expected newvalue", redis.get ("key1") ~ "newvalue")
-		end
-
-
-	test_redis_commands_commons_and_string
+test_redis_commands_commons_and_string
 			-- New test routine
 		local
 			params : HASH_TABLE [STRING_8, STRING_8]
@@ -361,6 +303,139 @@ feature -- Redis Common Operations
 			redis.set ("key","10")
 			assert("Expected 11", 11 = redis.incr ("key"))
 		end
+
+	test_incrby
+		---INCRBY key integer 					
+		--Increment the integer value of key by integer
+	 	do
+	 		assert("Expect 5", 5=redis.incrby("key",5))
+	 	end
+
+
+	test_incrby_negative
+		--INCRBY key integer 					
+		--Increment the integer value of key by integer
+	 	do
+	 		redis.set ("key", "-5")
+	 		assert("Expect 0", 0=redis.incrby("key",5))
+	 	end
+
+	 test_decr
+	 	--DECR key 						
+	 	--Decrement the integer value of key
+	 	do
+	 		assert("Expect -1", -1=redis.decr("key"))
+	 	end
+
+	 test_decr_key_exist
+	 	--DECR key 						
+	 	--Decrement the integer value of key
+	 	do
+	 		redis.set ("key", "5")
+	 		assert("Expect 4", 4=redis.decr("key"))
+	 	end
+
+	 test_decr_by
+		-- DECRBY key integer 					
+		-- Decrement the integer value of key by integer
+	 	do
+	 		assert("Expected -5", -5 = redis.decrby ("key",5))
+	 		assert("Expected 5", 5 = redis.decrby ("key1",-5))
+	 	end
+
+	test_append
+		--APPEND key value 					
+		--Append the specified string to the string stored at key
+		do
+			assert("Expected 2", 2 = redis.append("key","aa"))
+		end
+
+	test_append_key_exists
+		--APPEND key value 					
+		--Append the specified string to the string stored at key
+		do
+			redis.set ("key", "bbb")
+			assert("Expected 5", 5 = redis.append("key","aa"))
+		end
+
+	test_substr
+		--SUBSTR key start end 					
+		--Return a substring of a larger string
+		do
+			redis.set ("key", "Return a substring of a larger string")
+			assert("Expected Return", "Return" ~ redis.substR("key",0,5))
+		end
+
+
+
+feature -- Redis Common Operations
+	rename_keys_old_and_new_are_differents
+		do
+			redis.set ("oldkey", "value")
+			redis.rename_key ("oldkey","newkey")
+			assert("Expected value", redis.get ("newkey") ~ "value"  )
+		end
+
+	rename_keys_old_and_new_are_equals_should_fail
+		do
+			redis.set ("oldkey", "value")
+			redis.rename_key ("oldkey","oldkey")
+			assert ("not implemented", False)
+		end
+
+	get_the_number_of_key_after_set_should_be_one_more_key
+		local
+			l_number_keys : INTEGER
+		do
+			l_number_keys := redis.db_size
+			redis.set ("nuevaK8", "nuevoV")
+			assert("Expected one more element", (l_number_keys + 1) = redis.db_size)
+			assert ("Expected 1", 1 = redis.del (<<"nuevaK8">>))
+			assert("Expected equal number", (l_number_keys ) = redis.db_size)
+		end
+
+	random_key_void_if_db_is_empty
+		do
+			assert ("Expected void",redis.randomkey = Void)
+		end
+
+	random_key_not_void_if_db_not_is_empty
+		do
+			redis.set ("key1","value1")
+			redis.set ("key3","value2")
+			assert ("Expected not void",redis.randomkey /= Void)
+		end
+
+	get_db_index
+		do
+			redis.select_db (1)
+			assert("Expected 0", 0 = redis.db_size)
+		end
+
+	delete
+		local
+			l_number_keys : INTEGER
+		do
+			l_number_keys := redis.db_size
+			assert("Equal Zero", l_number_keys = 0)
+			redis.set ("key", "value")
+			redis.flush_db
+			l_number_keys := redis.db_size
+			assert("Equal zero", l_number_keys = 0)
+		end
+
+	get_set_return_the_old_value_and_set_a_new_one
+		-- GETSET key value 					
+		-- Set a key to a string returning the old value of the key
+		do
+			redis.set ("key1", "oldvalue")
+			assert("Expected oldvalue", redis.getset("key1","newvalue")~"oldvalue")
+			assert("Expected newvalue", redis.get ("key1") ~ "newvalue")
+		end
+
+
+
+
 feature -- Redis Operations on List
 	test_commands_on_list
 		do

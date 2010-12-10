@@ -42,13 +42,13 @@ Command 	Parameters 					Description
 /SETNX 		key value 					Set a key to a string value if the key does not exist
 /SETEX 		key time value 					Set+Expire combo command
 /MSET 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation
-/MSETNX 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
+/MSETNX 	key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
 /INCR 		key 						Increment the integer value of key
-INCRBY 		key integer 					Increment the integer value of key by integer
-DECR 		key 						Decrement the integer value of key
-DECRBY 		key integer 					Decrement the integer value of key by integer
-APPEND 		key value 					Append the specified string to the string stored at key
-SUBSTR 		key start end 					Return a substring of a larger string 
+/INCRBY 	key integer 					Increment the integer value of key by integer
+/DECR 		key 						Decrement the integer value of key
+/DECRBY 	key integer 					Decrement the integer value of key by integer
+/APPEND 	key value 					Append the specified string to the string stored at key
+/SUBSTR 	key start end 					Return a substring of a larger string 
 
 
 

@@ -193,6 +193,7 @@ feature -- Redis Protocol
 		require
 			is_valid_command :is_valid_redis_command (a_command)
 			is_connnected : is_connected
+			valid_arguments : arguments /= void
 		do
 
 			socket.put_string (asterisk_byte.out+(arguments.count+1).out + crlf)
@@ -226,6 +227,29 @@ feature -- Close Connection
 		end
 
 feature -- Status Report
+
+	is_valid_key (a_key : STRING) : BOOLEAN
+		-- A key `a_key' is valid if it is not void
+		do
+			Result := a_key /= Void
+		end
+
+
+	is_valid_value (a_value : STRING) : BOOLEAN
+		-- A value `a_value' is valid if it is not void
+		do
+			Result := a_value /= Void
+		end
+
+	for_all_not_null ( param :ARRAY[STRING] ) : BOOLEAN
+		require
+			valid_param: param /= Void
+		do
+			Result := param.for_all (agent (item: STRING) : BOOLEAN do
+				Result := item /= Void
+			end)
+		end
+
 	for_all (a_collection: ARRAY[STRING]; a_type: STRING) : BOOLEAN
 		-- For all `item' in `a_collection', the type should be equal
 		-- to `a_type', iff the item exist in the Database
@@ -242,7 +266,7 @@ feature -- Status Report
 			not_void : a_command /= Void
 		do
 			Result := redis_commands.has (a_command)
-		end
+		enD
 
 	is_valid_redis_type ( a_type : STRING) : BOOLEAN
 		require
@@ -296,6 +320,7 @@ feature -- Redis Commands operating on all value types
 		-- Test if the specified key exists.
 		-- The command returns `True' if the key exists, otherwise `False' is returned.
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -314,6 +339,7 @@ feature -- Redis Commands operating on all value types
 		-- remove the expire from a key
 		-- currently not supported
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -321,7 +347,6 @@ feature -- Redis Commands operating on all value types
 			create l_arguments.make (1)
 			l_arguments.force (a_key)
 			send_command (persist_command, l_arguments)
-
 		end
 
 	del (arguments : ARRAY[STRING]) : INTEGER
@@ -329,6 +354,7 @@ feature -- Redis Commands operating on all value types
 		-- If a given key does not exist no operation is performed for this key
 		-- The command returns the number of keys removed.
 		require
+			is_connected : is_connected
 			valid_arguments : arguments /= Void
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -342,6 +368,7 @@ feature -- Redis Commands operating on all value types
 		-- Return the type of the value stored at key in form of a string.
 		-- The type can be one of "none", "string", "list", "set". "none" is returned if the key does not exist.
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -361,6 +388,7 @@ feature -- Redis Commands operating on all value types
 		-- If the source and destination name are the same an error is returned.
 		-- If newkey already exists it is overwritten.
 		require
+			is_connected : is_connected
 			valid_keys : an_old_key /= Void and then a_new_key /= Void
 			not_equals : not (an_old_key ~ a_new_key)
 		local
@@ -374,9 +402,11 @@ feature -- Redis Commands operating on all value types
 			reply := read_status_reply
 			check_reply (reply)
 		end
+
 	keys ( a_pattern : STRING) : LIST[STRING]
 		-- Returns all the keys matching the glob-style pattern as space separated strings.
 		require
+			is_connected : is_connected
 			valid_pattern : a_pattern /= Void
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -390,7 +420,9 @@ feature -- Redis Commands operating on all value types
 
 	randomkey : STRING
 		--Time complexity: O(1)
-	    --Return a randomly selected key from the currently selected DB.
+		--Return a randomly selected key from the currently selected DB.
+		require
+			is_connected : is_connected
 		local
 			l_arguments : ARRAYED_LIST[STRING]
 		do
@@ -414,6 +446,9 @@ feature -- Redis Commands operating on all value types
 	select_db ( an_index : INTEGER)
 		-- Select the DB with having the specified zero-based numeric index.
 		-- For default every new client connection is automatically selected to DB 0. 	
+		require
+			is_connected : is_connected
+			valid_index: an_index >= 0
 		local
 			l_arguments : ARRAYED_LIST[STRING]
 			reply : STRING
@@ -428,6 +463,7 @@ feature -- Redis Commands operating on all value types
 	expire (a_key : STRING; a_seconds : INTEGER)
 		-- set a time to live in seconds `a_seconds' on a key `a_key'
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 			valid_timeout : a_seconds > 0
 		local
@@ -439,7 +475,6 @@ feature -- Redis Commands operating on all value types
 			l_arguments.force (a_seconds.out)
 			send_command (expire_command, l_arguments)
 			l_result := read_integer_reply
-			-- TODO Log the result
 		end
 
 	ttl (a_key : STRING) : INTEGER
@@ -447,6 +482,7 @@ feature -- Redis Commands operating on all value types
 		-- This introspection capability allows a Redis client to check how many seconds a given key will continue to be part of the dataset.
 		-- If the Key does not exists or does not have an associated expire, -1 is returned.
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -464,6 +500,7 @@ feature -- Redis Commands operating on all value types
 		-- Note that this command returns 1 only if the key was successfully moved, and 0 if the target key was already there
 		-- or if the source key was not found at all, so it is possible to use MOVE as a locking primitive.
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 			valid_index : an_index >= 0
 		local
@@ -493,6 +530,8 @@ feature -- Redis Commands operating on all value types
 			send_command (flush_db_command, l_arguments)
 			reply := read_status_reply
 			check_reply (reply)
+		ensure
+			-- redis.db_size = 0
 		end
 
 	flush_all
@@ -507,7 +546,10 @@ feature -- Redis Commands operating on all value types
 			send_command (flush_all_command, l_arguments)
 			reply := read_status_reply
 			check_reply (reply)
+		ensure
+			--for all db's redis.db_size = 0
 		end
+
 feature -- Redis Commands Operating on Strings
 
 	last_reply : STRING
@@ -517,6 +559,7 @@ feature -- Redis Commands Operating on Strings
 		-- SET key value Set a key to a string value
 		-- The string can't be longer than 1073741824 bytes
 		require
+			is_connected : is_connected
 			valid_key: a_key /= Void
 			valid_value : a_value /= Void and then a_value.count <= 1073741824
 		local
@@ -529,16 +572,14 @@ feature -- Redis Commands Operating on Strings
 			send_command (set_command, l_arguments)
 			reply := read_status_reply
 			check_reply (reply)
-		ensure
-			correct : not has_error
-			--if a_key does not exists implies the db has one more element
 		end
 
 	setnx ( a_key : STRING; a_value : STRING) : INTEGER
 		--Time complexity: O(1)
-	    --SETNX works exactly like SET with the only difference that if the key already exists no operation is performed.
-	    --SETNX actually means "SET if Not eXists".
+		--SETNX works exactly like SET with the only difference that if the key already exists no operation is performed.
+		--SETNX actually means "SET if Not eXists".
 		require
+			is_connected : is_connected
 			valid_key: a_key /= Void
 			valid_value : a_value /= Void and then a_value.count <= 1073741824
 		local
@@ -557,11 +598,12 @@ feature -- Redis Commands Operating on Strings
 	setex ( a_key : STRING; an_exp_time: INTEGER a_value : STRING)
 		--Time complexity: O(1)
 		--The command is exactly equivalent to the following group of commands:
-		--  SET _key_ _value_
-    	--	EXPIRE _key_ _time_
+		--  SET _key_ _value
+		--	EXPIRE _key_ _time_
 		--The operation is atomic. An atomic SET+EXPIRE operation was already provided using MULTI/EXEC,
 		--but SETEX is a faster alternative provided because this operation is very common when Redis is used as a Cache.
 		require
+			is_connected : is_connected
 			valid_key: a_key /= Void
 			valid_exp_time : an_exp_time > 0
 			valid_value : a_value /= Void and then a_value.count <= 1073741824
@@ -579,17 +621,18 @@ feature -- Redis Commands Operating on Strings
 		end
 
 	mset ( a_params : HASH_TABLE[STRING,STRING])
-		   --Set the the respective keys to the respective values.
-		   --MSET will replace old values with new values
-   		   --MSET is an atomic operation.
-   		   require
+		--Set the the respective keys to the respective values.
+		--MSET will replace old values with new values
+		--MSET is an atomic operation.
+		require
+   		   	is_connected : is_connected
    		   	valid_param : a_params /= Void
    		   	-- each param should be a valid key and a valid value
    		   	local
    		   		l_arguments : ARRAYED_LIST [STRING]
    		   		reply : STRING
    		   	do
-   		   		create l_arguments.make (10)
+   		   		create l_arguments.make (a_params.count*2)
    		   		from
    		   			a_params.start
    		   		until
@@ -606,32 +649,33 @@ feature -- Redis Commands Operating on Strings
 
 
 	msetnx ( a_params : HASH_TABLE[STRING,STRING]) : INTEGER
-			--Time complexity: O(1) to set every key
-			--MSETNX will not perform any operation at all even if just a single key already exists.
-			--Because of this semantic MSETNX can be used in order to set
-			--different keys representing different fields of an unique logic object in a way
-			-- that ensures that either all the fields or none at all are set.
-			-- Both MSET and MSETNX are atomic operations.
-   		   require
-   		   	valid_param : a_params /= Void
+		--Time complexity: O(1) to set every key
+		--MSETNX will not perform any operation at all even if just a single key already exists.
+		--Because of this semantic MSETNX can be used in order to set
+		--different keys representing different fields of an unique logic object in a way
+		-- that ensures that either all the fields or none at all are set.
+		-- Both MSET and MSETNX are atomic operations.
+		require
+			is_connected : is_connected
+			valid_param : a_params /= Void
    		   	-- each param should be a valid key and a valid value
-   		   	local
-   		   		l_arguments : ARRAYED_LIST [STRING]
-   		   		reply : STRING
-   		   	do
-   		   		create l_arguments.make (10)
-   		   		from
-   		   			a_params.start
-   		   		until
-   		   			a_params.after
-   		   		loop
-   		   			l_arguments.force (a_params.key_for_iteration)
-   		   			l_arguments.force (a_params.item_for_iteration)
-   		   			a_params.forth
-   		   		end
-   		   		send_command (msetnx_command, l_arguments)
-				Result := read_integer_reply
-		   	end
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			reply : STRING
+		do
+			create l_arguments.make (10)
+			from
+				a_params.start
+			until
+				a_params.after
+			loop
+				l_arguments.force (a_params.key_for_iteration)
+				l_arguments.force (a_params.item_for_iteration)
+				a_params.forth
+			end
+			send_command (msetnx_command, l_arguments)
+			Result := read_integer_reply
+		end
 
 
 
@@ -641,6 +685,7 @@ feature -- Redis Commands Operating on Strings
 		--Set key to the string value and return the old value stored at key.
 		--The string can't be longer than 1073741824 bytes
 		require
+			is_connected : is_connected
 			valid_key: a_key /= Void
 			valid_value : a_value /= Void and then a_value.count <= 1073741824
 		local
@@ -652,9 +697,6 @@ feature -- Redis Commands Operating on Strings
 			l_arguments.force (a_value)
 			send_command (getset_command, l_arguments)
 			Result := read_bulk_reply
-		ensure
-			correct : not has_error
-			--if a_key does not exists implies the db has one more element
 		end
 
 	get (a_key : STRING) : STRING
@@ -662,6 +704,7 @@ feature -- Redis Commands Operating on Strings
 		-- If the key does not exist the special value 'Void' is returned.
 		-- If the value stored at key is not a string an error is returned because GET can only handle string values.
 		require
+			is_connected : is_connected
 			valid_key : a_key /= Void
 			if_the_key_exists_is_string : exists(a_key) implies (type (a_key) ~ type_string)
 		local
@@ -675,8 +718,9 @@ feature -- Redis Commands Operating on Strings
 
 
 	mget ( a_key : ARRAY[STRING] ) : LIST[STRING]
-		---Multi-get, return the strings values of the keys
+		--Multi-get, return the strings values of the keys
 		require
+			is_connected : is_connected
 			valid_keys : a_key /= Void and then not a_key.is_empty
 		local
 			l_arguments : ARRAYED_LIST[STRING]
@@ -687,11 +731,11 @@ feature -- Redis Commands Operating on Strings
 		end
 
 
-
 	incr ( a_key : STRING ) : INTEGER
 		--Time complexity: O(1)
 		--Increment or decrement the number stored at key by one.
 		require
+			is_connected : is_connected
 			valid_keys : a_key /= Void
 			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) and then get(a_key).is_integer_64 )
 		local
@@ -703,6 +747,115 @@ feature -- Redis Commands Operating on Strings
 			Result := read_integer_reply
 		ensure
 			increment : old (get_integer (a_key)) + 1 = get_integer (a_key)
+		end
+
+
+	incrby ( a_key : STRING; a_value:INTEGER_64 ) : INTEGER
+		--Time complexity: O(1)
+		--Increment the value of the `a_key' by `a_value'
+		require
+			is_connected : is_connected
+			valid_keys : a_key /= Void
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) and then get(a_key).is_integer_64 )
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_value.out)
+			send_command (incrby_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			increment : old (get_integer (a_key)) + a_value = get_integer (a_key)
+		end
+
+	decr ( a_key : STRING ) : INTEGER
+		--Time complexity: O(1)
+		--Increment or decrement the number stored at key by one.
+		require
+			is_connected : is_connected
+			valid_keys : a_key /= Void
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) and then get(a_key).is_integer_64 )
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (decr_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			increment : old (get_integer (a_key)) - 1 = get_integer (a_key)
+		end
+
+	decrby ( a_key : STRING; a_value:INTEGER_64 ) : INTEGER
+		--Time complexity: O(1)
+		--Decrement the value of the `a_key' by `a_value'
+		require
+			is_connected : is_connected
+			valid_keys : a_key /= Void
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) and then get(a_key).is_integer_64 )
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_value.out)
+			send_command (decrby_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			decrement : old (get_integer (a_key)) - a_value = get_integer (a_key)
+		end
+
+
+	append ( a_key : STRING; a_value : STRING) : INTEGER
+		--Time complexity: O(1).
+		--The amortized time complexity is O(1) assuming the appended value is small and the
+		--already present value is of any size, since the dynamic string library used by Redis
+		--will double the free space available on every reallocation.
+		--If the key already exists and is a string,
+		--this command appends the provided value at the end of the string.
+		--If the key does not exist it is created and set as an empty string,
+		--so APPEND will be very similar to SET in this special case.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_value : a_value /= Void
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) )
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_value)
+			send_command (append_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	substr ( a_key : STRING; a_start:INTEGER; an_end : INTEGER) : STRING
+		--Time complexity: O(start+n) (with start being the start index
+		--and n the total length of the requested range).
+		--Note that the lookup part of this command is O(1) so for
+		--small strings this is actually an O(1) command.
+		--Return a subset of the string from offset start
+		--to offset end (both offsets are inclusive).
+		--Negative offsets can be used in order to provide
+		--an offset starting from the end of the string.
+		--So -1 means the last char, -2 the penultimate and so forth.
+		--The function handles out of range requests without raising an error,
+		--but just limiting the resulting range to the actual length of the string.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) )
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_start.out)
+			l_arguments.force (an_end.out)
+			send_command (substr_command, l_arguments)
+			Result := read_bulk_reply
 		end
 
 feature -- Redis Commands Operating on Lists
@@ -1140,6 +1293,7 @@ feature -- Redis Commands Operating on Sets
 		require
 			valid_arguments : arguments /= Void and then not arguments.is_empty
 			valid_type_for_each_element : for_all (arguments, type_set)
+			valid_element:for_all_not_null (arguments)
 		local
 			l_arguments : ARRAYED_LIST[STRING]
 		do
@@ -1171,6 +1325,7 @@ feature -- Redis Commands Operating on Sets
   		require
 			valid_arguments : arguments /= Void and then not arguments.is_empty
 			valid_type_for_each_element : for_all (arguments, type_set)
+			valid_elements : for_all_not_null (arguments)
 		local
 			l_arguments : ARRAYED_LIST[STRING]
 			l_reply : STRING
