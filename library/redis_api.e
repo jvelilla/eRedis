@@ -80,6 +80,7 @@ feature {NONE} -- Implementation
 				Result := get (a_key).to_integer
 			end
 		end
+
 feature -- Redis Protocol
 
 
@@ -212,6 +213,7 @@ feature -- Redis Protocol
 
 
 feature -- Close Connection
+
 	close
 		-- Close the connection
 		require
@@ -266,7 +268,7 @@ feature -- Status Report
 			not_void : a_command /= Void
 		do
 			Result := redis_commands.has (a_command)
-		enD
+		end
 
 	is_valid_redis_type ( a_type : STRING) : BOOLEAN
 		require
@@ -628,24 +630,24 @@ feature -- Redis Commands Operating on Strings
    		   	is_connected : is_connected
    		   	valid_param : a_params /= Void
    		   	-- each param should be a valid key and a valid value
-   		   	local
-   		   		l_arguments : ARRAYED_LIST [STRING]
-   		   		reply : STRING
-   		   	do
-   		   		create l_arguments.make (a_params.count*2)
-   		   		from
-   		   			a_params.start
-   		   		until
-   		   			a_params.after
-   		   		loop
-   		   			l_arguments.force (a_params.key_for_iteration)
-   		   			l_arguments.force (a_params.item_for_iteration)
-   		   			a_params.forth
-   		   		end
-   		   		send_command (mset_command, l_arguments)
-				reply := read_status_reply
-				check_reply (reply)
-   		   	end
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			reply : STRING
+		do
+			create l_arguments.make (a_params.count*2)
+			from
+				a_params.start
+			until
+				a_params.after
+			loop
+				l_arguments.force (a_params.key_for_iteration)
+				l_arguments.force (a_params.item_for_iteration)
+				a_params.forth
+			end
+			send_command (mset_command, l_arguments)
+			reply := read_status_reply
+			check_reply (reply)
+		end
 
 
 	msetnx ( a_params : HASH_TABLE[STRING,STRING]) : INTEGER
@@ -1099,12 +1101,12 @@ feature -- Redis Commands Operating on Lists
 
 	brpop (arguments : ARRAY[STRING]; a_timeout: INTEGER) : LIST[STRING]
 		--Time complexity: O(1)
- 	    --BLPOP (and BRPOP) is a blocking list pop primitive.
- 	    --You can see this commands as blocking versions of LPOP and RPOP able to block if the specified
- 	    --keys don't exist or contain empty lists.
-	    --The following is a description of the exact semantic.
-	    --We describe BLPOP but the two commands are identical, the only difference is that BLPOP pops the
-	    --element from the left (head) of the list, and BRPOP pops from the right (tail).
+		--BLPOP (and BRPOP) is a blocking list pop primitive.
+		--You can see this commands as blocking versions of LPOP and RPOP able to block if the specified
+		--keys don't exist or contain empty lists.
+		--The following is a description of the exact semantic.
+		--We describe BLPOP but the two commands are identical, the only difference is that BLPOP pops the
+		--element from the left (head) of the list, and BRPOP pops from the right (tail).
 		require
 			valid_arguments : arguments /= void
 			for_all_exists_key_is_type_list : for_all (arguments, type_list)
