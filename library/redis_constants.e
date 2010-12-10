@@ -8,10 +8,14 @@ deferred class
 	REDIS_CONSTANTS
 feature -- Commands
 	SET_Command			: STRING = "SET"
+	SETNX_Command		: STRING = "SETNX"
+	SETEX_Command		: STRING = "SETEX"
 	GET_Command			: STRING = "GET"
 	GETSET_Command		: STRING = "GETSET"
 	MGET_Command		: STRING = "MGET"
 	MSET_Command		: STRING = "MSET"
+	MSETNX_Command		: STRING = "MSETNX"
+	INCR_Command		: STRING = "INCR"
 	Flush_db_command	: STRING = "FLUSHDB"
 	Flush_all_command	: STRING = "FLUSHALL"
 	Exists_command		: STRING = "EXISTS"
@@ -63,7 +67,8 @@ feature -- Commands
 				persist_command, move_command,rpush_command,lpush_command,llen_command,lrange_command,ltrim_command,lindex_command,
 				lset_command,lrem_command,rpop_command,lpop_command,sadd_command,srem_command,spop_command,scard_command,sismember_command,
 				sinter_command,smove_command,sinterstore_command,sunion_command,sunionstore_command,sdiff_command,sdiffstore_command,
-				smembers_command,srandmember_command,blpop_command,brpop_command,rpoplpush_command,randomkey_command,getset_command>>
+				smembers_command,srandmember_command,blpop_command,brpop_command,rpoplpush_command,randomkey_command,getset_command,setnx_command
+				,setex_command,msetnx_command,incr_command>>
 		end
 
 	TYPE_NONE : STRING = "none"

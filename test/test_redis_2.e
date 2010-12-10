@@ -156,6 +156,9 @@ feature -- String operations
 			assert("Expected size 2", l_result.count = 2)
 		end
 
+
+
+feature -- Redis Common Operations
 	rename_keys_old_and_new_are_differents
 		do
 			redis.set ("oldkey", "value")
@@ -181,8 +184,6 @@ feature -- String operations
 			assert("Expected equal number", (l_number_keys ) = redis.db_size)
 		end
 
-
-feature -- Redis Common Operations
 	random_key_void_if_db_is_empty
 		do
 			assert ("Expected void",redis.randomkey = Void)
@@ -281,7 +282,85 @@ feature -- Redis Common Operations
 			assert("Not Exists Key2 in DB 0", not redis.exists ("key2"))
 		end
 
+	test_setnx_key_does_not_exist_should_insert_it_and_return_1
+		--SETNX key value 					
+		--Set a key to a string value if the key does not exist
+		do
+			assert("Expected 1", 1 = redis.setnx ("key", "value"))
+			assert("Expected exists key", redis.exists ("key"))
+		end
 
+	test_setnx_key_exist_should_not_insert_it_and_return_0
+		--SETNX key value 					
+		--Set a key to a string value if the key does not exist
+		do
+			redis.set ("key", "value")
+			assert("Expected 0", 0 = redis.setnx ("key", "valueNX"))
+			assert("Expected value ", redis.get ("key") ~ "value")
+		end
+
+	test_setex
+		--SETEX key time value 					
+		--Set+Expire combo command
+		do
+			redis.setex("key", 100, "value")
+			assert("Expected >0", redis.ttl ("key") > 0)
+		end
+
+	test_msetnx_set_multiple_keys_that_does_exist_return_1
+		--MSETNX  key1 value1 key2 value2 ... keyN valueN 	
+		-- Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
+		local
+			params : HASH_TABLE[STRING,STRING]
+		do
+			create params.make (3)
+			params.force ("value4", "key1")
+			params.force ("value5", "key2")
+			params.force ("value6", "key3")
+			assert("Expected 1", 1 = redis.msetnx(params))
+			assert("Expected value", redis.get ("key1") ~ "value4")
+			assert("Expected value", redis.get ("key2") ~ "value5")
+			assert("Expected value", redis.get ("key3") ~ "value6")
+		end
+
+	test_msetnx_set_multiple_keys_that_exist_return_0
+		--MSETNX  key1 value1 key2 value2 ... keyN valueN 	
+		-- Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
+		local
+			params : HASH_TABLE[STRING,STRING]
+		do
+			redis.set ("key3", "valu3")
+			create params.make (3)
+			params.force ("value4", "key1")
+			params.force ("value5", "key2")
+			params.force ("value6", "key3")
+			assert("Expected 0", 0 = redis.msetnx(params))
+		end
+
+
+	test_incr
+		--INCR 	key 						
+		--Increment the integer value of key		
+		do
+			assert("Expected 1", 1 = redis.incr("A"))
+			assert("Expected 2", 2 = redis.incr("A"))
+		end
+
+	test_incr_requirements
+		do
+			redis.set ("key1", "hola")
+			if redis.exists("key1") implies( (redis.type ("key1") ~ redis.type_string) and then redis.get("key1").is_integer_64 ) then
+				assert("Not expected", False)
+			else
+				assert("Expected true",true)
+			end
+		end
+
+	test_incr_on_exist_key_should_increment_the_value_by_one
+		do
+			redis.set ("key","10")
+			assert("Expected 11", 11 = redis.incr ("key"))
+		end
 feature -- Redis Operations on List
 	test_commands_on_list
 		do
@@ -652,7 +731,7 @@ feature -- Redis Operations on Sets
 
 feature {NONE} -- Implemention
 	port : INTEGER = 6379
-	host : STRING =  "192.168.211.217"
+	host : STRING =  "192.168.211.185"
 end
 
 

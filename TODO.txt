@@ -37,13 +37,13 @@ Commands operating on string values
 Command 	Parameters 					Description
 /SET 		key value 					Set a key to a string value
 /GET 		key 						Return the string value of the key
-GETSET 		key value 					Set a key to a string returning the old value of the key
+/GETSET 	key value 					Set a key to a string returning the old value of the key
 /MGET 		key1 key2 ... keyN 				Multi-get, return the strings values of the keys
-SETNX 		key value 					Set a key to a string value if the key does not exist
-SETEX 		key time value 					Set+Expire combo command
+/SETNX 		key value 					Set a key to a string value if the key does not exist
+/SETEX 		key time value 					Set+Expire combo command
 /MSET 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation
-MSETNX 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
-INCR 		key 						Increment the integer value of key
+/MSETNX 		key1 value1 key2 value2 ... keyN valueN 	Set multiple keys to multiple values in a single atomic operation if none of the keys already exist
+/INCR 		key 						Increment the integer value of key
 INCRBY 		key integer 					Increment the integer value of key by integer
 DECR 		key 						Decrement the integer value of key
 DECRBY 		key integer 					Decrement the integer value of key by integer
@@ -66,7 +66,7 @@ Command 	Parameters 					Description
 /LPOP 		key 						Return and remove (atomically) the first element of the List at key
 /RPOP 		key 						Return and remove (atomically) the last element of the List at key
 /?BLPOP 	key1 key2 ... keyN timeout 			Blocking LPOP
-/?BRPOP 		key1 key2 ... keyN timeout 			Blocking RPOP
+/?BRPOP 	key1 key2 ... keyN timeout 			Blocking RPOP
 /RPOPLPUSH 	srckey dstkey 					Return and remove (atomically) the last element of the source List stored at srckey and push the same 									element to the destination List stored at dstkey
 
 Commands operating on sets

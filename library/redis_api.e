@@ -70,6 +70,16 @@ feature {NONE} -- Implementation
 			Result := not ( a_response.starts_with (error_response))
 		end
 
+	get_integer (a_key : STRING) : INTEGER
+		require
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) and then get(a_key).is_integer_64 )
+		do
+			if not exists (a_key) then
+				Result := 0
+			else
+				Result := get (a_key).to_integer
+			end
+		end
 feature -- Redis Protocol
 
 
@@ -524,6 +534,50 @@ feature -- Redis Commands Operating on Strings
 			--if a_key does not exists implies the db has one more element
 		end
 
+	setnx ( a_key : STRING; a_value : STRING) : INTEGER
+		--Time complexity: O(1)
+	    --SETNX works exactly like SET with the only difference that if the key already exists no operation is performed.
+	    --SETNX actually means "SET if Not eXists".
+		require
+			valid_key: a_key /= Void
+			valid_value : a_value /= Void and then a_value.count <= 1073741824
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_value)
+			send_command (setnx_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			-- Return 0 or 1
+			-- if return 0 the key exist, if not the key does not exist but now it exist
+		end
+
+	setex ( a_key : STRING; an_exp_time: INTEGER a_value : STRING)
+		--Time complexity: O(1)
+		--The command is exactly equivalent to the following group of commands:
+		--  SET _key_ _value_
+    	--	EXPIRE _key_ _time_
+		--The operation is atomic. An atomic SET+EXPIRE operation was already provided using MULTI/EXEC,
+		--but SETEX is a faster alternative provided because this operation is very common when Redis is used as a Cache.
+		require
+			valid_key: a_key /= Void
+			valid_exp_time : an_exp_time > 0
+			valid_value : a_value /= Void and then a_value.count <= 1073741824
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+			l_reply : STRING
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (an_exp_time.out)
+			l_arguments.force (a_value)
+			send_command (setex_command, l_arguments)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
 	mset ( a_params : HASH_TABLE[STRING,STRING])
 		   --Set the the respective keys to the respective values.
 		   --MSET will replace old values with new values
@@ -551,6 +605,35 @@ feature -- Redis Commands Operating on Strings
    		   	end
 
 
+	msetnx ( a_params : HASH_TABLE[STRING,STRING]) : INTEGER
+			--Time complexity: O(1) to set every key
+			--MSETNX will not perform any operation at all even if just a single key already exists.
+			--Because of this semantic MSETNX can be used in order to set
+			--different keys representing different fields of an unique logic object in a way
+			-- that ensures that either all the fields or none at all are set.
+			-- Both MSET and MSETNX are atomic operations.
+   		   require
+   		   	valid_param : a_params /= Void
+   		   	-- each param should be a valid key and a valid value
+   		   	local
+   		   		l_arguments : ARRAYED_LIST [STRING]
+   		   		reply : STRING
+   		   	do
+   		   		create l_arguments.make (10)
+   		   		from
+   		   			a_params.start
+   		   		until
+   		   			a_params.after
+   		   		loop
+   		   			l_arguments.force (a_params.key_for_iteration)
+   		   			l_arguments.force (a_params.item_for_iteration)
+   		   			a_params.forth
+   		   		end
+   		   		send_command (msetnx_command, l_arguments)
+				Result := read_integer_reply
+		   	end
+
+
 
 	getset ( a_key : STRING; a_value : STRING) : STRING
 		--Time complexity: O(1)
@@ -573,7 +656,7 @@ feature -- Redis Commands Operating on Strings
 			correct : not has_error
 			--if a_key does not exists implies the db has one more element
 		end
-		
+
 	get (a_key : STRING) : STRING
 		-- Get the value of the specified key.
 		-- If the key does not exist the special value 'Void' is returned.
@@ -601,6 +684,25 @@ feature -- Redis Commands Operating on Strings
 			create l_arguments.make_from_array (a_key)
 			send_command (mget_command, l_arguments)
 			Result := read_multi_bulk_reply
+		end
+
+
+
+	incr ( a_key : STRING ) : INTEGER
+		--Time complexity: O(1)
+		--Increment or decrement the number stored at key by one.
+		require
+			valid_keys : a_key /= Void
+			if_exist_is_valid_key_and_value : exists(a_key) implies( (type (a_key) ~ type_string) and then get(a_key).is_integer_64 )
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (incr_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			increment : old (get_integer (a_key)) + 1 = get_integer (a_key)
 		end
 
 feature -- Redis Commands Operating on Lists
