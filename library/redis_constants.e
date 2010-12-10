@@ -77,17 +77,17 @@ feature -- Commands
 		end
 
 	TYPE_NONE : STRING = "none"
-			-- 	"none" if the key does not exist
-	TYPE_STRING  : STRING = "string"
-			--"string" if the key contains a String value
+		-- 	"none" if the key does not exist
+	TYPE_STRING : STRING = "string"
+		--"string" if the key contains a String value
 	TYPE_LIST : STRING = "list"
-			--"list" if the key contains a List value
-	TYPE_SET :	STRING = "set"
-			--"set" if the key contains a Set value
+		--"list" if the key contains a List value
+	TYPE_SET : STRING = "set"
+		--"set" if the key contains a Set value
 	TYPE_ZSET : STRING = "zset"
-			--"zset" if the key contains a Sorted Set value
+		--"zset" if the key contains a Sorted Set value
 	TYPE_HASH : STRING = "hash"
-			--"hash" if the key contains a Hash value
+		--"hash" if the key contains a Hash value
 
 	Redis_types : ARRAY[STRING]
 		-- List of valid redis types
@@ -105,10 +105,10 @@ feature -- {NONE} Redis Protocol
 	NOT_EXIST_KEY :	STRING ="*-1"
 
 	DOLLAR_BYTE : CHARACTER = '$'
-    ASTERISK_BYTE : CHARACTER = '*'
-    PLUS_BYTE : CHARACTER = '+'
-    MINUS_BYTE : CHARACTER = '-'
-    COLON_BYTE : CHARACTER = ':'
+	ASTERISK_BYTE : CHARACTER = '*'
+	PLUS_BYTE : CHARACTER = '+'
+	MINUS_BYTE : CHARACTER = '-'
+	COLON_BYTE : CHARACTER = ':'
 
-    ERROR_RESPONSE : STRING ="-ERR"
+	ERROR_RESPONSE : STRING ="-ERR"
 end
