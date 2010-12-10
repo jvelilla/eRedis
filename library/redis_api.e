@@ -947,16 +947,16 @@ feature -- Redis Commands Operating on Lists
 
 	ltrim (a_key : STRING; an_start : INTEGER; an_end: INTEGER)
 		--Time complexity: O(n) (with n being len of list - len of range)
-	    --Trim an existing list so that it will contain only the specified range of elements specified.
-	    --Start and end are zero-based indexes.
-	    --0 is the first element of the list (the list head), 1 the next element and so on.
-	    --For example LTRIM foobar 0 2 will modify the list stored at foobar key so that only the first three elements
-	    --of the list will remain.
-    	--start and end can also be negative numbers indicating offsets from the end of the list.
-    	--For example -1 is the last element of the list, -2 the penultimate element and so on.
-    	--Indexes out of range will not produce an error:
-    	--if start is over the end of the list, or start > end, an empty list is left as value.
-    	--If end over the end of the list Redis will threat it just like the last element of the list.
+		--Trim an existing list so that it will contain only the specified range of elements specified.
+		--Start and end are zero-based indexes.
+		--0 is the first element of the list (the list head), 1 the next element and so on.
+		--For example LTRIM foobar 0 2 will modify the list stored at foobar key so that only the first three elements
+		--of the list will remain.
+		--start and end can also be negative numbers indicating offsets from the end of the list.
+		--For example -1 is the last element of the list, -2 the penultimate element and so on.
+		--Indexes out of range will not produce an error:
+		--if start is over the end of the list, or start > end, an empty list is left as value.
+		--If end over the end of the list Redis will threat it just like the last element of the list.
 		require
 			valid_key : a_key /= Void
 			if_exists_key_is_type_list : exists (a_key) implies (type (a_key) ~ type_list)
@@ -1000,8 +1000,8 @@ feature -- Redis Commands Operating on Lists
 
 	lset (a_key : STRING; an_index:INTEGER; a_value:STRING)
 		-- Time complexity: O(N) (with N being the length of the list)
-	    -- Set the list element at index (see LINDEX for information about the index argument) with the new value.
-	    -- Out of range indexes will generate an error. Note that setting the first or last elements of the list is O(1).
+		-- Set the list element at index (see LINDEX for information about the index argument) with the new value.
+		-- Out of range indexes will generate an error. Note that setting the first or last elements of the list is O(1).
 		-- Similarly to other list commands accepting indexes, the index can be negative to access elements starting from the end of the list.
 		-- So -1 is the last element, -2 is the penultimate, and so forth.
 		require
@@ -1044,9 +1044,9 @@ feature -- Redis Commands Operating on Lists
 
 	lpop (a_key : STRING) : STRING
 		--Time complexity: O(1)
-    	--Atomically return and remove the first (LPOP)  element of the list.
-    	--For example if the list contains the elements "a","b","c" LPOP will return "a" and the list will become "b","c".
-	    --If the key does not exist or the list is already empty the special value 'nil' is returned.
+		--Atomically return and remove the first (LPOP)  element of the list.
+		--For example if the list contains the elements "a","b","c" LPOP will return "a" and the list will become "b","c".
+		--If the key does not exist or the list is already empty the special value 'nil' is returned.
 		require
 			valid_key : a_key /= Void
 			if_exists_key_is_type_list : exists (a_key) implies (type (a_key) ~ type_list)
@@ -1061,9 +1061,9 @@ feature -- Redis Commands Operating on Lists
 
 	rpop (a_key : STRING) : STRING
 		--Time complexity: O(1)
-    	--Atomically return and remove the last (RPOP)  element of the list.
-    	--For example if the list contains the elements "a","b","c" RPOP will return "c" and the list will become "a","b".
-	    --If the key does not exist or the list is already empty the special value 'nil' is returned.
+		--Atomically return and remove the last (RPOP)  element of the list.
+		--For example if the list contains the elements "a","b","c" RPOP will return "c" and the list will become "a","b".
+		--If the key does not exist or the list is already empty the special value 'nil' is returned.
 		require
 			valid_key : a_key /= Void
 			if_exists_key_is_type_list : exists (a_key) implies (type (a_key) ~ type_list)
@@ -1079,12 +1079,12 @@ feature -- Redis Commands Operating on Lists
 
 	blpop (arguments : ARRAY[STRING]; a_timeout: INTEGER) : LIST[STRING]
 		--Time complexity: O(1)
- 	    --BLPOP (and BRPOP) is a blocking list pop primitive.
- 	    --You can see this commands as blocking versions of LPOP and RPOP able to block if the specified
- 	    --keys don't exist or contain empty lists.
-	    --The following is a description of the exact semantic.
-	    --We describe BLPOP but the two commands are identical, the only difference is that BLPOP pops the
-	    --element from the left (head) of the list, and BRPOP pops from the right (tail).
+		--BLPOP (and BRPOP) is a blocking list pop primitive.
+		--You can see this commands as blocking versions of LPOP and RPOP able to block if the specified
+		--keys don't exist or contain empty lists.
+		--The following is a description of the exact semantic.
+		--We describe BLPOP but the two commands are identical, the only difference is that BLPOP pops the
+		--element from the left (head) of the list, and BRPOP pops from the right (tail).
 		require
 			valid_arguments : arguments /= void
 			for_all_exists_key_is_type_list : for_all (arguments, type_list)
@@ -1183,7 +1183,7 @@ feature -- Redis Commands Operating on Sets
 		--	Time complexity O(1)
 		--  Remove a random element from a Set returning it as return value.
 		--  If the Set is empty or the key does not exist, a nil object is returned.
-	    -- 	The SRANDMEMBER command does a similar work but the returned element is not removed from the Set.
+		-- 	The SRANDMEMBER command does a similar work but the returned element is not removed from the Set.
 		require
 			valid_key : a_key /= Void
 			if_exists_key_is_type_set : exists (a_key) implies (type (a_key) ~ type_set)
@@ -1199,8 +1199,8 @@ feature -- Redis Commands Operating on Sets
 
 	scard,set_cardinality(a_key : STRING) : INTEGER
 		-- Time complexity O(1)
-	    -- Return the set cardinality (number of elements).
-	    -- If the key does not exist 0 is returned, like for empty sets.
+		-- Return the set cardinality (number of elements).
+		-- If the key does not exist 0 is returned, like for empty sets.
 		require
 			valid_key : a_key /= Void
 			if_exists_key_is_type_set : exists (a_key) implies (type (a_key) ~ type_set)
@@ -1321,7 +1321,7 @@ feature -- Redis Commands Operating on Sets
 
 	sdiff (arguments : ARRAY[STRING]) : LIST[STRING]
 		--Time complexity O(N) with N being the total number of elements of all the sets
-  		-- Return the members of a set resulting from the difference between the first set provided and all the successive sets.		
+		-- Return the members of a set resulting from the difference between the first set provided and all the successive sets.		
   		require
 			valid_arguments : arguments /= Void and then not arguments.is_empty
 			valid_type_for_each_element : for_all (arguments, type_set)
@@ -1338,7 +1338,7 @@ feature -- Redis Commands Operating on Sets
 
 	sdiffstore (arguments : ARRAY[STRING])
 		--Time complexity O(N) where N is the total number of elements in all the provided sets
-	    --This command works exactly like SDIFF but instead of being returned the resulting set is stored in dstkey.
+		--This command works exactly like SDIFF but instead of being returned the resulting set is stored in dstkey.
 		require
 			valid_arguments : arguments /= Void and then arguments.count >= 2
 			valid_type_for_each_element : for_all (arguments, type_set)
@@ -1355,8 +1355,8 @@ feature -- Redis Commands Operating on Sets
 
 	smembers (a_key : STRING) : LIST[STRING]
 		--Time complexity O(N)
-	    --Return all the members (elements) of the set value stored at key.
-	    --This is just syntax glue for SINTER.
+		--Return all the members (elements) of the set value stored at key.
+		--This is just syntax glue for SINTER.
 		require
 			valid_key: a_key /= Void
 			if_exists_key_is_type_set : exists (a_key) implies (type (a_key) ~ type_set)
@@ -1371,8 +1371,8 @@ feature -- Redis Commands Operating on Sets
 
 	srandmember (a_key : STRING) : STRING
 		--Time complexity O(1)
-	    --Return a random element from a Set, without removing the element.
-	    --If the Set is empty or the key does not exist, a nil object is returned.
+		--Return a random element from a Set, without removing the element.
+		--If the Set is empty or the key does not exist, a nil object is returned.
 		--The SPOP command does a similar work but the returned element is popped (removed) from the Set.
 		require
 			valid_key: a_key /= Void
