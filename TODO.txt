@@ -87,6 +87,79 @@ Command 	Parameters 					Description
 /SMEMBERS 	key 						Return all the members of the Set value at key
 /SRANDMEMBER 	key 						Return a random member of the Set value at key 
 
+
+
+
+
+Commands operating on sorted zsets (sorted sets)
+
+Command 		Parameters 				Description
+/ZADD 			key score member 			Add the specified member to the Sorted Set value at key or update the score if it already exist
+/ZREM 			key member 				Remove the specified member from the Sorted Set value at key
+/ZINCRBY 		key increment member 			If the member already exists increment its score by increment, otherwise add the member setting increment as score
+/ZRANK 			key member 				Return the rank (or index) or member in the sorted set at key, with scores being ordered from low to high
+/ZREVRANK 		key member 				Return the rank (or index) or member in the sorted set at key, with scores being ordered from high to low
+/ZRANGE 		key start end 				Return a range of elements from the sorted set at key
+/ZREVRANGE 		key start end 				Return a range of elements from the sorted set at key, exactly like ZRANGE, but the sorted set is ordered in traversed in reverse order, from the greatest to the smallest score
+/ZRANGEBYSCORE 		key min max 				Return all the elements with score >= min and score <= max (a range query) from the sorted set
+/ZCOUNT 		key min max 				Return the number of elements with score >= min and score <= max in the sorted set
+ZCARD 			key 					Return the cardinality (number of elements) of the sorted set at key
+ZSCORE 			key element 				Return the score associated with the specified element of the sorted set at key
+ZREMRANGEBYRANK 	key min max 				Remove all the elements with rank >= min and rank <= max from the sorted set
+ZREMRANGEBYSCORE 	key min max 				Remove all the elements with score >= min and score <= max from the sorted set
+ZUNIONSTORE / 
+ZINTERSTORE 		dstkey N key1 ... keyN WEIGHTS w1 ... 
+			wN AGGREGATE SUM|MIN|MAX 		Perform a union or intersection over a number of sorted sets with optional weight and aggregate
+
+Commands operating on hashes
+
+Command 	Parameters 					Description
+HSET 		key field value 				Set the hash field to the specified value. Creates the hash if needed.
+HGET 		key field 					Retrieve the value of the specified hash field.
+HMGET	 	key field1 ... fieldN 				Get the hash values associated to the specified fields.
+HMSET	 	key field1 value1 ... fieldN valueN 		Set the hash fields to their respective values.
+HINCRBY 	key field integer 				Increment the integer value of the hash at key on field with integer.
+HEXISTS 	key field 					Test for existence of a specified field in a hash
+HDEL 		key field 					Remove the specified field from a hash
+HLEN 		key 						Return the number of items in a hash.
+HKEYS	 	key 						Return all the fields in a hash.
+HVALS	 	key 						Return all the values in a hash.
+HGETALL 	key 						Return all the fields and associated values in a hash.
+
+Sorting
+
+Command 	Parameters 							Description
+SORT 		key BY pattern LIMIT start end 
+		GET pattern ASC|DESC ALPHA 					Sort a Set or a List accordingly to the specified parameters
+Transactions
+
+Command 				Parameters 	Description
+MULTI/EXEC/DISCARD/WATCH/UNWATCH 	- 		Redis atomic transactions
+
+Publish/Subscribe
+
+Command 			Parameters 		Description
+SUBSCRIBE/UNSUBSCRIBE/PUBLISH 	- 			Redis Public/Subscribe messaging paradigm implementation
+
+Persistence control commands
+
+Command 	Parameters 	Description
+SAVE 		- 		Synchronously save the DB on disk
+BGSAVE 		- 		Asynchronously save the DB on disk
+LASTSAVE 	- 		Return the UNIX time stamp of the last successfully saving of the dataset on disk
+SHUTDOWN 	- 		Synchronously save the DB on disk, then shutdown the server
+BGREWRITEAOF 	- 		Rewrite the append only file in background when it gets too big
+
+Remote server control commands
+
+Command 	Parameters 	Description
+INFO 		- 		Provide information and statistics about the server
+MONITOR 	- 		Dump all the received requests in real time
+SLAVEOF 	- 		Change the replication settings
+CONFIG 		- 		Configure a Redis server at runtime 
+
+
+
 Connection
 /Socket 
 
