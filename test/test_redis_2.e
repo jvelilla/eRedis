@@ -802,11 +802,264 @@ feature -- Redis Operations on Sets
 			assert("Expected not is member", not redis.sismember ("key", l_result))
 		end
 
- feature -- testing status report
+feature	-- Sorted Sets
+
+	test_zadd
+		--ZADD 	key score member 			
+		--Add the specified member to the Sorted Set value at key or update the score if it already exist	
+		do
+			assert("expected 1", 1=redis.zadd("a_key", 10.0, "a_value"))
+			assert("expected 0", 0=redis.zadd("a_key", 11.1, "a_value"))
+		end
+
+	test_zrem
+		--ZREM key member 				
+		--Remove the specified member from the Sorted Set value at key
+		do
+			assert("expected 1", 1=redis.zadd("a_key", 10.0, "a_value"))
+			assert("expected 1", 1=redis.zrem("a_key","a_value"))
+			assert("expected 0", 0=redis.zrem("a_key","a_value"))
+		end
+
+	test_zincrby
+		--ZINCRBY key increment member 			
+		--If the member already exists increment its score by increment, otherwise add the member setting increment as score
+		do
+			assert("Expected 5", redis.zincrby("key",10.5,"value") ~ "10.5")
+			assert("Expected 5", redis.zincrby("key",5,"value") ~ "15.5" )
+		end
+
+	test_zrank
+		--ZRANK key member 				
+		--Return the rank (or index) or member in the sorted set at key, with scores being ordered from low to high
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 0.9, "value4"))
+			assert("Expected -1", -1 = redis.zrank("key","value13"))
+			assert("Expected 2", 2 = redis.zrank("key","value3"))
+		end
+
+	test_revrank
+		--ZREVRANK key member 				
+		--Return the rank (or index) or member in the sorted set at key, with scores being ordered from high to low
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 0.9, "value4"))
+			assert("Expected -1", -1 = redis.zrevrank("key","value13"))
+			assert("Expected 1", 1 = redis.zrevrank("key","value3"))
+		end
+
+	test_zrange
+		--ZRANGE key start end 				
+		--Return a range of elements from the sorted set at key
+		local
+			l_result : LIST [STRING]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrange("key",2,4)
+			assert ("Expected element value3", "value3" ~ l_result.at (1))
+			assert ("Expected element value8", "value8" ~ l_result.at (2))
+			assert ("Expected element value5", "value5" ~ l_result.at (3))
+		end
+
+	test_zrevrange
+		--ZREVRANGE key start end 				
+		--Return a range of elements from the sorted set at key, exactly like ZRANGE,
+		--but the sorted set is ordered in traversed in reverse order, from the greatest to the smallest score
+		local
+			l_result : LIST [STRING]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrevrange("key",2,4)
+			assert ("Expected element value2", "value2" ~ l_result.at (1))
+			assert ("Expected element value5", "value5" ~ l_result.at (2))
+			assert ("Expected element value8", "value8" ~ l_result.at (3))
+		end
+
+	test_zrangebyscore
+		--ZRANGEBYSCORE key min max 				
+		--Return all the elements with score >= min and score <= max (a range query) from the sorted set
+		local
+			l_result : LIST [STRING]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrangebyscore("key",2,4)
+			assert ("Expected element value3", "value3" ~ l_result.at (1))
+			assert ("Expected element value8", "value8" ~ l_result.at (2))
+			assert ("Expected element value5", "value5" ~ l_result.at (3))
+		end
+
+
+	test_zrangebyscore_empty
+		--ZRANGEBYSCORE key min max 				
+		--Return all the elements with score >= min and score <= max (a range query) from the sorted set
+		local
+			l_result : LIST [STRING]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrangebyscore("key",4,2)
+			assert("Expected empty", l_result.is_empty)
+		end
+
+	test_zcount
+		--ZCOUNT key min max 				
+		--Return the number of elements with score >= min and score <= max in the sorted set
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			assert("Expected 4", 4 = redis.zcount("key",1.5,4))
+		end
+
+	test_zcount_empty
+		do
+			assert("Expected 0", 0 = redis.zcount("key",8,9))
+		end
+
+	test_zcard_empty
+		--ZCARD key
+		--Return the cardinality (number of elements) of the sorted set at key
+		do
+			assert("Expected 0", 0 = redis.zcard ("key"))
+		end
+
+	test_zcard
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			assert("Expected 4", 8 = redis.zcard("key"))
+		end
+
+	test_zscore_empty
+		--ZSCORE key element 				
+		--Return the score associated with the specified element of the sorted set at key
+		do
+			assert("Expected Void", Void = redis.zscore("key","element"))
+		end
+
+	test_zcore
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1.5, "value1"))
+			assert("Expected 1.5", "1.5" ~ redis.zscore("key","value1"))
+		end
+
+	test_zremrangebyrank
+		--ZREMRANGEBYRANK 	key min max 				
+		--Remove all the elements with rank >= min and rank <= max from the sorted set
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			assert("Expected 2", 2 = redis.zremrangebyrank ("key",1,2))
+		end
+
+	test_zremrangebyrank_empty
+		--ZREMRANGEBYRANK 	key min max 				
+		--Remove all the elements with rank >= min and rank <= max from the sorted set
+		do
+			assert("Expected 0", 0 = redis.zremrangebyrank ("key",1,2))
+		end
+
+	test_zremrangebyscore
+		--ZREMRANGEBYSCORE 	key min max 				
+		--Remove all the elements with score >= min and score <= max from the sorted set	
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			assert("Expected 2", 2 = redis.zremrangebyscore ("key",0.8,1.9))
+		end
+
+	test_zremrangebyscore_empty
+		--ZREMRANGEBYSCORE 	key min max 				
+		--Remove all the elements with score >= min and score <= max from the sorted set	
+		do
+			assert("Expected 0", 0 = redis.zremrangebyscore ("key",1.3,2))
+		end
+
+	test_zunionstore
+		--ZUNIONSTORE dstkey N k1 ... kN [WEIGHTS w1 ... wN] [AGGREGATE SUM|MIN|MAX]		
+		--Perform a union or intersection over a number of sorted sets with optional weight and aggregate
+		do
+			assert("Expected 1", 1 = redis.zadd ("key1", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key2", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key3", 2, "value3"))
+
+			assert("expected 3", 3 = redis.zunionstore("u",<<"key1","key2","key3">>))
+			assert("Expected 1", 1 = redis.zadd ("key4", 2, "value3"))
+			assert("expected 3", 3 = redis.zunionstore("u",<<"key1","key2","key3","key4">>))
+		end
+
+	test_zinterstore
+		--ZINTERSTORE dstkey N k1 ... kN [WEIGHTS w1 ... wN] [AGGREGATE SUM|MIN|MAX]		
+		--Perform a union or intersection over a number of sorted sets with optional weight and aggregate
+		do
+			assert("Expected 1", 1 = redis.zadd ("key1", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key2", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key3", 2, "value3"))
+
+			assert("expected 0", 0 = redis.zinterstore("u",<<"key1","key2","key3">>))
+			assert("Expected 1", 1 = redis.zadd ("key4", 2, "value3"))
+			assert("expected 1", 1= redis.zunionstore("u",<<"key3","key4">>))
+		end
+feature -- testing status report
 
 feature {NONE} -- Implemention
 	port : INTEGER = 6379
-	host : STRING =  "192.168.211.185"
+	host : STRING =  "192.168.211.221"
 end
 
 
