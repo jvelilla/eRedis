@@ -1388,6 +1388,406 @@ feature -- Redis Commands Operating on Sets
 			Result := read_bulk_reply
 		end
 
+feature -- Redis Commands Operating on ZSets (sorted sets)
+
+	zadd ( a_key:STRING; a_score:DOUBLE; a_value:STRING) : INTEGER
+		--Time complexity O(log(N)) with N being the number of elements in the sorted set
+		--Add the specified member having the specifeid score to the sorted set stored at key.
+		--If member is already a member of the sorted set the score is updated,
+		--and the element reinserted in the right position to ensure sorting.
+		--If key does not exist a new sorted set with the specified member as sole member is crated.
+		--If the key exists but does not hold a sorted set value an error is returned.
+		--The score value can be the string representation of a double precision floating point number.
+		require
+			is_connected : is_connected
+			a_valid_key : a_key /= Void
+			a_valid_value : a_value /= Void
+			if_key_exist_is_type_zset: exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_score.out)
+			l_arguments.force (a_value)
+			send_command (zadd_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Response_0_or_1: Result = 1 or else Result = 0
+		end
+
+	zrem ( a_key : STRING; a_value : STRING) : INTEGER
+		--Time complexity O(log(N)) with N being the number of elements in the sorted set
+		--Remove the specified member from the sorted set value stored at key.
+		--If member was not a member of the set no operation is performed.
+		--If key does not not hold a set value an error is returned.
+		require
+			is_connected : is_connected
+			valid_key: a_key /= Void
+			valid_value : a_value /= Void
+			if_key_exists_is_type_zet : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_value)
+			send_command (zrem_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Result_0_or_1 : Result = 1 or else Result = 0
+		end
+
+	zincrby ( a_key: STRING; an_increment:DOUBLE; a_value: STRING):STRING
+		--Time complexity O(log(N)) with N being the number of elements in the sorted set
+		--If member already exists in the sorted set adds the increment to its score and
+		--updates the position of the element in the sorted set accordingly.
+		--If member does not already exist in the sorted set it is added with increment as score
+		--(that is, like if the previous score was virtually zero).
+		--If key does not exist a new sorted set with the specified member as sole member is crated.
+		--If the key exists but does not hold a sorted set value an error is returned.
+		--The score value can be the string representation of a double precision floating point number.
+		--It's possible to provide a negative value to perform a decrement.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_value : a_value /= Void
+			if_key_exists_if_type_is_zset: exists (a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (an_increment.out)
+			l_arguments.force (a_value)
+			send_command (zincrby_command, l_arguments)
+			Result := read_bulk_reply
+		end
+
+	zrank ( a_key : STRING; a_member:STRING) : INTEGER
+		--Time complexity: O(log(N))
+		--ZRANK returns the rank of the member in the sorted set, with scores ordered from low to high.
+		--When the given member does not exist in the sorted set, the special value '-1' is returned.
+		--The returned rank (or index) of the member is 0-based
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_member : a_member /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			l_result : INTEGER
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_member)
+			send_command (zrank_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Response : Result >= -1
+		end
+
+	zrevrank ( a_key : STRING; a_member:STRING) : INTEGER
+		--Time complexity: O(log(N))
+		--ZREVRANK returns the rank of the member in the sorted set, with scores ordered from high to low.
+		--When the given member does not exist in the sorted set, the special value '-1' is returned.
+		--The returned rank (or index) of the member is 0-based
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_member : a_member /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			l_result : INTEGER
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_member)
+			send_command (zrevrank_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Response : Result >= -1
+		end
+
+	zrange ( a_key : STRING; a_start : INTEGER; an_end: INTEGER) : LIST[STRING]
+		--Time complexity: O(log(N))+O(M) (with N being the number of elements in the sorted set and M the number of elements requested)
+		--Return the specified elements of the sorted set at the specified key.
+		--The elements are considered sorted from the lowerest to the highest score when using ZRANGE,
+		--and in the reverse order when using ZREVRANGE. Start and end are zero-based indexes.
+		--0 is the first element of the sorted set (the one with the lowerest score when using ZRANGE),
+		--1 the next element by score and so on.
+		--start and end can also be negative numbers indicating offsets from the end of the sorted set.
+		--For example -1 is the last element of the sorted set, -2 the penultimate element and so on.
+		--Indexes out of range will not produce an error:
+		--if start is over the end of the sorted set, or start > end, an empty list is returned.
+		--If end is over the end of the sorted set Redis will threat it just like the last element of the sorted set.
+		--It's possible to pass the WITHSCORES option to the command in order to return not only the values but also
+		--the scores of the elements.
+		--Redis will return the data as a single list composed of value1,score1,value2,score2,...,valueN,scoreN
+		--but client libraries are free to return a more appropriate data type
+		--(what we think is that the best return type for this command is a Array of two-elements Array /
+		-- Tuple in order to preserve sorting).
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_start.out)
+			l_arguments.force (an_end.out)
+			send_command (zrange_command, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+	zrevrange ( a_key : STRING; a_start : INTEGER; an_end: INTEGER) : LIST[STRING]
+		--Time complexity: O(log(N))+O(M) (with N being the number of elements in the sorted set and M the number of elements requested)
+		--Return the specified elements of the sorted set at the specified key.
+		--The elements are considered sorted from the lowerest to the highest score when using ZRANGE,
+		--and in the reverse order when using ZREVRANGE. Start and end are zero-based indexes.
+		--0 is the first element of the sorted set (the one with the lowerest score when using ZRANGE),
+		--1 the next element by score and so on.
+		--start and end can also be negative numbers indicating offsets from the end of the sorted set.
+		--For example -1 is the last element of the sorted set, -2 the penultimate element and so on.
+		--Indexes out of range will not produce an error:
+		--if start is over the end of the sorted set, or start > end, an empty list is returned.
+		--If end is over the end of the sorted set Redis will threat it just like the last element of the sorted set.
+		--It's possible to pass the WITHSCORES option to the command in order to return not only the values but also
+		--the scores of the elements.
+		--Redis will return the data as a single list composed of value1,score1,value2,score2,...,valueN,scoreN
+		--but client libraries are free to return a more appropriate data type
+		--(what we think is that the best return type for this command is a Array of two-elements Array /
+		-- Tuple in order to preserve sorting).
+		--
+		--TODO implement WITHSCORES!!!!
+		--
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_start.out)
+			l_arguments.force (an_end.out)
+			send_command (zrevrange_command, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+	zrangebyscore ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE) : LIST[STRING]
+		--Time complexity: O(log(N))+O(M) with N being the number of elements in the sorted set and M
+		--the number of elements returned by the command, so if M is constant
+		--(for instance you always ask for the first ten elements with LIMIT) you can consider it O(log(N))
+		--Return the all the elements in the sorted set at key with a score between min and max
+		--(including elements with score equal to min or max).
+		--The elements having the same score are returned sorted lexicographically as ASCII strings
+		--(this follows from a property of Redis sorted sets and does not involve further computation).
+		--Using the optional LIMIT it's possible to get only a range of the matching elements in an SQL-alike way.
+		--Note that if offset is large the commands needs to traverse the list for offset elements and this adds up to the O(M) figure.
+		--The ZCOUNT command is similar to ZRANGEBYSCORE but instead of returning the actual elements in the specified interval,
+		--it just returns the number of matching elements.
+		--Exclusive intervals and infinity
+		--min and max can be -inf and +inf, so that you are not required to know what's the greatest or smallest element in order
+		--to take, for instance, elements "up to a given value".
+		--Also while the interval is for default closed (inclusive) it's possible to specify open intervals prefixing the score with a "(" character, so for instance:
+		--
+		--TODO implement ZRANGEBYSCORE key min max [LIMIT offset count] [WITHSCORES]
+		--
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			send_command (zrangebyscore_command, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+
+	zcount ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE) : INTEGER
+		--Time complexity: O(log(N))+O(M) with N being the number of elements in the sorted set and M
+		--the number of elements returned by the command, so if M is constant
+		--(for instance you always ask for the first ten elements with LIMIT) you can consider it O(log(N))
+		--Return the all the elements in the sorted set at key with a score between min and max
+		--(including elements with score equal to min or max).
+		--The elements having the same score are returned sorted lexicographically as ASCII strings
+		--(this follows from a property of Redis sorted sets and does not involve further computation).
+		--Using the optional LIMIT it's possible to get only a range of the matching elements in an SQL-alike way.
+		--Note that if offset is large the commands needs to traverse the list for offset elements and this adds up to the O(M) figure.
+		--The ZCOUNT command is similar to ZRANGEBYSCORE but instead of returning the actual elements in the specified interval,
+		--it just returns the number of matching elements.
+		--Exclusive intervals and infinity
+		--min and max can be -inf and +inf, so that you are not required to know what's the greatest or smallest element in order
+		--to take, for instance, elements "up to a given value".
+		--Also while the interval is for default closed (inclusive) it's possible to specify open intervals prefixing the score with a "(" character, so for instance:
+		--
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			send_command (zcount_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	zcard ( a_key : STRING) : INTEGER
+		--Time complexity O(1)
+		--Return the sorted set cardinality (number of elements).
+		--If the key does not exist 0 is returned, like for empty sorted sets.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (zcard_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Response: Result >= 0
+		end
+
+	zscore ( a_key : STRING; an_element : STRING) : STRING
+		--Time complexity O(1)
+		--Return the score of the specified element of the sorted set at key.
+		--If the specified element does not exist in the sorted set, or the key does not exist at all,
+		--a special 'Void' value is returned.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_element : an_element /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (an_element)
+			send_command (zscore_command, l_arguments)
+			Result := read_bulk_reply
+		end
+
+	zremrangebyrank ( a_key:STRING; a_min:INTEGER; a_max:INTEGER) : INTEGER
+		--Time complexity: O(log(N))+O(M) with N being the number of elements in the sorted set
+		--and M the number of elements removed by the operation
+		--Remove all elements in the sorted set at key with rank between start and end.
+		-- Start and end are 0-based with rank 0 being the element with the lowest score.
+		--Both start and end can be negative numbers, where they indicate offsets starting at the element with the highest rank.
+		--For example: -1 is the element with the highest score, -2 the element with the second highest score and so forth.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			send_command (zremrangebyrank_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+	zremrangebyscore ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE) : INTEGER
+		--Time complexity: O(log(N))+O(M) with N being the number of elements in the sorted set and
+		--M the number of elements removed by the operation
+		--Remove all the elements in the sorted set at key with a score between min and max
+		--(including elements with score equal to min or max).
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			send_command (zremrangebyscore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+
+	zunionstore ( a_key:STRING; arguments:ARRAY[STRING]) : INTEGER
+		--Time complexity: O(N) + O(M log(M)) with N being the sum of the sizes of the input sorted sets,
+		--and M being the number of elements in the resulting sorted set
+		--Creates a union or intersection of N sorted sets given by keys k1 through kN, and stores it at dstkey.
+		--It is mandatory to provide the number of input keys N, before passing the input keys and the other (optional) arguments.
+		--As the terms imply, the ZINTERSTORE command requires an element to be present in each of the given inputs
+		--to be inserted in the result. The ZUNIONSTORE command inserts all elements across all inputs.
+		--Using the WEIGHTS option, it is possible to add weight to each input sorted set.
+		--This means that the score of each element in the sorted set is first multiplied by this weight
+		--before being passed to the aggregation. When this option is not given, all weights default to 1.
+		--With the AGGREGATE option, it's possible to specify how the results of the union or intersection are aggregated.
+		--This option defaults to SUM, where the score of an element is summed across the inputs where it exists.
+		--When this option is set to be either MIN or MAX, the resulting set will contain the minimum or maximum score of an
+		--element across the inputs where it exists. 		
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			send_command (zunionstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	zinterstore ( a_key:STRING; arguments:ARRAY[STRING]) : INTEGER
+		--Time complexity: O(N) + O(M log(M)) with N being the sum of the sizes of the input sorted sets,
+		--and M being the number of elements in the resulting sorted set
+		--Creates a union or intersection of N sorted sets given by keys k1 through kN, and stores it at dstkey.
+		--It is mandatory to provide the number of input keys N, before passing the input keys and the other (optional) arguments.
+		--As the terms imply, the ZINTERSTORE command requires an element to be present in each of the given inputs
+		--to be inserted in the result. The ZUNIONSTORE command inserts all elements across all inputs.
+		--Using the WEIGHTS option, it is possible to add weight to each input sorted set.
+		--This means that the score of each element in the sorted set is first multiplied by this weight
+		--before being passed to the aggregation. When this option is not given, all weights default to 1.
+		--With the AGGREGATE option, it's possible to specify how the results of the union or intersection are aggregated.
+		--This option defaults to SUM, where the score of an element is summed across the inputs where it exists.
+		--When this option is set to be either MIN or MAX, the resulting set will contain the minimum or maximum score of an
+		--element across the inputs where it exists. 		
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			send_command (zinterstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
 invariant
 		non_empty_description: has_error implies (error_description /= Void and (not error_description.is_empty))
 		socket_valid : socket /= Void
