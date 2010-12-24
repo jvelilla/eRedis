@@ -78,7 +78,18 @@ feature -- Commands
 	ZREMRANGEBYSCORE_Command: STRING = "ZREMRANGEBYSCORE"
 	ZUNIONSTORE_Command		: STRING = "ZUNIONSTORE"
 	ZINTERSTORE_Command		: STRING = "ZINTERSTORE"
-
+	HSET_Command			: STRING = "HSET"
+	HGET_Command			: STRING = "HGET"
+	HSETNX_Command			: STRING = "HSETNX"
+	HMSET_Command			: STRING = "HMSET"
+	HMGET_Commmand			: STRING = "HMGET"
+	HINCRBY_Command			: STRING = "HINCRBY"
+	HEXISTS_Command 		: STRING = "HEXISTS"
+	HDEL_Command			: STRING = "HDEL"
+	HLEN_Command			: STRING = "HLEN"
+	HGETALL_Command			: STRING = "HGETALL"
+	HKEYS_Command			: STRING = "HKEYS"
+	HVALS_Command			: STRING = "HVALS"
 
 	Redis_commands : ARRAY[STRING]
 		-- List of valid redis commands
@@ -92,8 +103,24 @@ feature -- Commands
 				,setex_command,msetnx_command,incr_command,incrby_command,decr_command,decrby_command,append_command,substr_command,
 				zadd_command,zrem_command,zincrby_command,zrank_command,zrevrank_command,zrange_command,zrevrange_command,zrangebyscore_command,
 				zcount_command,zcard_command,zscore_command,zremrangebyrank_command,zremrangebyscore_command,zunionstore_command,
-				zinterstore_command>>
+				zinterstore_command,hset_command,hget_command,hsetnx_command,hmset_command,hmget_commmand,hincrby_command,hexists_command,
+				hdel_command,hlen_command,hgetall_command,hkeys_command,hvals_command>>
 		end
+
+	WITHSCORES		: STRING ="WITHSCORES"
+	LIMIT			: STRING ="LIMIT"
+	WEIGHTS			: STRING ="WEIGHTS"
+	AGGREGATE       : STRING ="AGGREGATE"
+	SUM				: STRING ="SUM"
+	MIN				: STRING ="MIN"
+	MAX				: STRING ="MAX"
+
+	aggregate_values : ARRAY [STRING]
+		-- Redis aggregate values
+		once
+			Result :=<<sum,min,max>>
+		end
+feature -- Redis Types
 
 	TYPE_NONE : STRING = "none"
 		-- 	"none" if the key does not exist

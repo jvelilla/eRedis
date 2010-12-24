@@ -873,6 +873,49 @@ feature	-- Sorted Sets
 			assert ("Expected element value5", "value5" ~ l_result.at (3))
 		end
 
+	test_zrange_withscores
+		--ZRANGE key start end 				
+		--Return a range of elements from the sorted set at key
+		local
+			l_result : LIST [TUPLE[STRING,STRING]]
+			l_tuple : TUPLE[STRING,STRING]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrange_withscores("key",2,4)
+			l_tuple := l_result.at (1)
+			assert ("Expected element [value3,2]", l_tuple[1] ~ "value3" and l_tuple[2]~"2")
+			l_tuple := l_result.at (2)
+--			assert ("Expected element [value8,3.9]", l_tuple[1] ~ "value8" and l_tuple[2] ~ "3.9")
+-- 			Redis return 3.899999999999999
+			l_tuple := l_result.at (3)
+			assert ("Expected element [value5,4]", l_tuple[1] ~ "value5" and l_tuple[2] ~ "4")
+		end
+
+	test_zrange_withscores_empty
+		--ZRANGE key start end 				
+		--Return a range of elements from the sorted set at key
+		local
+			l_result : LIST [TUPLE[STRING,STRING]]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrange_withscores("key",9,10)
+			assert ("Expected empty", l_result.is_empty)
+		end
+
 	test_zrevrange
 		--ZREVRANGE key start end 				
 		--Return a range of elements from the sorted set at key, exactly like ZRANGE,
@@ -893,6 +936,49 @@ feature	-- Sorted Sets
 			assert ("Expected element value5", "value5" ~ l_result.at (2))
 			assert ("Expected element value8", "value8" ~ l_result.at (3))
 		end
+
+	test_zrevrange_withscores
+		--ZRANGE key start end 				
+		--Return a range of elements from the sorted set at key
+		local
+			l_result : LIST [TUPLE[STRING,STRING]]
+			l_tuple : TUPLE[STRING,STRING]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrevrange_withscores("key",2,4)
+			l_tuple := l_result.at (1)
+			assert ("Expected element [value2,5]", l_tuple[1] ~ "value2" and l_tuple[2]~"5")
+			l_tuple := l_result.at (2)
+			assert ("Expected element [value5,4]", l_tuple[1] ~ "value5" and l_tuple[2] ~ "4")
+			l_tuple := l_result.at (3)
+--			assert ("Expected element [value8,3.9]", l_tuple[1] ~ "value8" and l_tuple[2] ~ "3.9")
+		end
+
+	test_zrevrange_withscores_empty
+		--ZRANGE key start end 				
+		--Return a range of elements from the sorted set at key
+		local
+			l_result : LIST [TUPLE[STRING,STRING]]
+		do
+			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
+			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
+			assert("Expected 1", 1 = redis.zadd ("key", 2, "value3"))
+			assert("Expected 1", 1 = redis.zadd ("key", 1.9, "value4"))
+			assert("Expected 1", 1 = redis.zadd ("key", 4, "value5"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7, "value6"))
+			assert("Expected 1", 1 = redis.zadd ("key", 7.9, "value7"))
+			assert("Expected 1", 1 = redis.zadd ("key", 3.9, "value8"))
+			l_result := redis.zrevrange_withscores("key",9,10)
+			assert ("Expected empty", l_result.is_empty)
+		end
+
 
 	test_zrangebyscore
 		--ZRANGEBYSCORE key min max 				
@@ -1057,9 +1143,199 @@ feature	-- Sorted Sets
 		end
 feature -- testing status report
 
+feature -- testing hsets
+	test_hset
+		--HSET key field value 				
+		--Set the hash field to the specified value. Creates the hash if needed.
+		do
+			assert ("Expected 1", 1 = redis.hset("key","field","value"))
+			assert ("Expected 0", 0 = redis.hset("key","field","value1"))
+		end
+
+	test_hget_empty
+		--HGET key field 					
+		--Retrieve the value of the specified hash field.
+		do
+			assert("Expected void", Void = redis.hget("key","field"))
+		end
+
+	test_hget
+		--HGET key field 					
+		--Retrieve the value of the specified hash field.
+		do
+			assert ("Expected 1", 1 = redis.hset("key","field","value"))
+			assert("Expected value", "value" ~ redis.hget("key","field"))
+		end
+
+	test_hsetnx
+		--HSETNX key field value 				
+		do
+			assert ("Expected 1", 1 = redis.hsetnx ("k","f","v"))
+			assert ("Expected 0", 0 = redis.hsetnx ("k","f","v1"))
+			assert ("Expected v", "v" ~ redis.hget ("k", "f"))
+		end
+
+	test_hmset
+		--HMSET	 key field1 value1 ... fieldN valueN 		
+		--Set the hash fields to their respective values.	
+		local
+			l_field_values : HASH_TABLE[STRING,STRING]
+		do
+			create l_field_values.make (4)
+			l_field_values.put ("v", "f")
+			l_field_values.put ("v1", "f1")
+			l_field_values.put ("v2", "f2")
+			l_field_values.put ("v3", "f3")
+			redis.hmset("k",l_field_values)
+			assert ("Expected value v", "v" ~ redis.hget ("k", "f"))
+			assert ("Expected value v1", "v1" ~ redis.hget ("k", "f1"))
+			assert ("Expected value v2", "v2" ~ redis.hget ("k", "f2"))
+			assert ("Expected value v3", "v3" ~ redis.hget ("k", "f3"))
+		end
+
+	test_hmget
+		--HMGET key field1 ... fieldN
+		--Get the hash values associated to the specified fields.
+		local
+			l_field_values : HASH_TABLE[STRING,STRING]
+			l_result : LIST [STRING]
+		do
+			create l_field_values.make (4)
+			l_field_values.put ("v", "f")
+			l_field_values.put ("v1", "f1")
+			l_field_values.put ("v2", "f2")
+			l_field_values.put ("v3", "f3")
+			l_result := redis.hmget("k",<<"f","f1","f2","f3">>)
+			assert("Expected 4 elements", 4 = l_result.count)
+		end
+
+	test_hincrby
+		--HINCRBY key field value
+		do
+			assert("expected 5", 5 = redis.hincrby("k","f",5))
+			assert("expected -1", -1 = redis.hincrby("k","f1",-1))
+		end
+
+	test_hexists
+		--HEXISTS key field
+		do
+			assert ("Expect false", not redis.hexists ("k","f"))
+			assert("expected 5", 5 = redis.hincrby("k","f",5))
+			assert ("Expect True", redis.hexists ("k","f"))
+		end
+
+	test_hdel
+		--HDEL key field	
+		do
+			assert("Expect 0", 0 = redis.hdel("k","f"))
+			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
+			assert("Expect true", redis.hexists ("k","f"))
+			assert("Expect 1", 1 = redis.hdel("k","f"))
+			assert("Expect false", not redis.hexists ("k","f"))
+		end
+
+	test_hlen
+		-- HLEN key
+		do
+			assert ("Expected 0", 0 = redis.hlen ("k"))
+			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f1", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f2", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f3", "v"))
+			assert ("Expected 4", 4 = redis.hlen ("k"))
+		end
+
+
+	test_hgetall
+		--HGETALL 	key 						
+		--Return all the fields and associated values in a hash.
+		local
+			l_result : LIST[STRING]
+		do
+			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f1", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f2", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f3", "v"))
+			l_result := redis.hgetall ("k")
+			assert ("Expected not void", l_result /= Void)
+			assert ("Expected f", l_result.at (1) ~ "f")
+			assert ("Expected v", l_result.at (2) ~ "v")
+			assert ("Expected len 8", l_result.count = 8)
+		end
+
+	test_hgetall_empty
+		--HGETALL 	key 						
+		--Return all the fields and associated values in a hash.
+		local
+			l_result : LIST[STRING]
+		do
+			l_result := redis.hgetall ("k")
+			assert ("Expected Empty list", l_result.is_empty)
+		end
+
+	test_hkeys
+		--HKEYS	key 						
+		--Return all the fields in a hash.
+		local
+			l_result : LIST [STRING]
+		do
+			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f1", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f2", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f3", "v"))
+			l_result := redis.hkeys ("k")
+			assert ("Expected len 4", l_result.count = 4)
+			assert ("Expected f", l_result.at (1) ~ "f")
+			assert ("Expected f1", l_result.at (2) ~ "f1")
+			assert ("Expected f2", l_result.at (3) ~ "f2")
+			assert ("Expected f3", l_result.at (4) ~ "f3")
+		end
+
+
+	test_hkeys_empty
+		--HKEYS	key 						
+		--Return all the fields in a hash.
+		local
+			l_result : LIST [STRING]
+		do
+			l_result := redis.hkeys ("k")
+			assert ("Expected empty", l_result.is_empty)
+		end
+
+
+	test_hvals
+		--HVALS key 						
+		--Return all the values in a hash
+		local
+			l_result : LIST [STRING]
+		do
+			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
+			assert("Expect 1", 1 = redis.hset ("k", "f1", "v1"))
+			assert("Expect 1", 1 = redis.hset ("k", "f2", "v2"))
+			assert("Expect 1", 1 = redis.hset ("k", "f3", "v3"))
+			l_result := redis.hvals ("k")
+			assert ("Expected len 4", l_result.count = 4)
+			assert ("Expected v", l_result.at (1) ~ "v")
+			assert ("Expected v1", l_result.at (2) ~ "v1")
+			assert ("Expected v2", l_result.at (3) ~ "v2")
+			assert ("Expected v3", l_result.at (4) ~ "v3")
+		end
+
+
+	test_hvals_empty
+		--HVALS key 						
+		--Return all the values in a hash
+		local
+			l_result : LIST [STRING]
+		do
+			l_result := redis.hvals ("k")
+			assert ("Expected empty", l_result.is_empty)
+		end
+
+
 feature {NONE} -- Implemention
 	port : INTEGER = 6379
-	host : STRING =  "192.168.211.221"
+	host : STRING =  "192.168.211.237"
 end
 
 

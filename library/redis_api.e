@@ -81,6 +81,34 @@ feature {NONE} -- Implementation
 			end
 		end
 
+	response_range_withscore_internal : LIST[TUPLE[STRING,STRING]]
+		-- Return a list of tuples (string,string)
+		require
+			is_connected : is_connected
+		local
+			l_list : LIST [STRING]
+			l_result :  ARRAYED_LIST [TUPLE[STRING,STRING]]
+			l_key : STRING
+			l_value : STRING
+		do
+			l_list := read_multi_bulk_reply
+			from
+				l_list.start
+				create l_result.make (l_list.count // 2)
+			until
+				l_list.after
+			loop
+				l_key := l_list.item_for_iteration
+				l_list.forth
+				check
+					not l_list.after
+				end
+				l_value := l_list.item_for_iteration
+				l_list.forth
+				l_result.force ([l_key,l_value])
+			end
+			Result := l_result
+		end
 feature -- Redis Protocol
 
 
@@ -91,7 +119,7 @@ feature -- Redis Protocol
 		require
 			is_connected : is_connected
 		do
-			socket.read_line_thread_aware
+			socket.read_line
 			Result := socket.last_string
 			check_valid_response (Result)
 		end
@@ -102,7 +130,7 @@ feature -- Redis Protocol
 		local
 			l_result : STRING
 		do
-			socket.read_line_thread_aware
+			socket.read_line
 			l_result := socket.last_string
 			check_valid_response (l_result)
 			if not has_error then
@@ -121,7 +149,7 @@ feature -- Redis Protocol
 			l_string: STRING
 			l_bytes : INTEGER
 		do
-			socket.read_line_thread_aware
+			socket.read_line
 			l_string :=  socket.last_string
 			check_valid_response (l_string)
 			if not has_error then
@@ -129,7 +157,7 @@ feature -- Redis Protocol
 					l_bytes := (l_string.substring (2, l_string.count - 1)).to_integer
 					socket.read_stream_thread_aware (l_bytes)
 					Result := socket.last_string
-					socket.read_line_thread_aware
+					socket.read_line
 				end
 			end
 		end
@@ -148,7 +176,7 @@ feature -- Redis Protocol
 		do
 			-- TODO clean this code
 			create l_return.make (10)
-			socket.read_line_thread_aware
+			socket.read_line
 			l_string := socket.last_string
 			check_valid_response (l_string)
 			if not has_error then
@@ -160,13 +188,13 @@ feature -- Redis Protocol
 					until
 						not socket.is_readable
 					loop
-						socket.read_line_thread_aware
+						socket.read_line
 						l_string := socket.last_string
 						if not  l_string.has_substring (null_response) then
 							l_bytes := (l_string.substring (2, l_string.count - 1)).to_integer
 							socket.read_stream_thread_aware (l_bytes)
 							l_return.force (socket.last_string)
-							socket.read_line_thread_aware
+							socket.read_line
 						else
 							l_return.force (Void)
 						end
@@ -229,6 +257,13 @@ feature -- Close Connection
 		end
 
 feature -- Status Report
+
+	is_valid_aggregate_value ( a_value : STRING) : BOOLEAN
+		-- Is `a_value' a valid aggregate_value (sum,min,max)?
+		do
+			aggregate_values.compare_objects
+			Result := aggregate_values.has (a_value)
+		end
 
 	is_valid_key (a_key : STRING) : BOOLEAN
 		-- A key `a_key' is valid if it is not void
@@ -663,7 +698,6 @@ feature -- Redis Commands Operating on Strings
    		   	-- each param should be a valid key and a valid value
 		local
 			l_arguments : ARRAYED_LIST [STRING]
-			reply : STRING
 		do
 			create l_arguments.make (10)
 			from
@@ -692,7 +726,6 @@ feature -- Redis Commands Operating on Strings
 			valid_value : a_value /= Void and then a_value.count <= 1073741824
 		local
 			l_arguments : ARRAYED_LIST[STRING]
-			reply : STRING
 		do
 			create l_arguments.make (2)
 			l_arguments.force (a_key)
@@ -1330,7 +1363,6 @@ feature -- Redis Commands Operating on Sets
 			valid_elements : for_all_not_null (arguments)
 		local
 			l_arguments : ARRAYED_LIST[STRING]
-			l_reply : STRING
 		do
 			create l_arguments.make_from_array (arguments)
 			send_command (sdiff_command, l_arguments)
@@ -1476,7 +1508,6 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
 		local
 			l_arguments : ARRAYED_LIST [STRING]
-			l_result : INTEGER
 		do
 			create l_arguments.make (2)
 			l_arguments.force (a_key)
@@ -1499,7 +1530,6 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
 		local
 			l_arguments : ARRAYED_LIST [STRING]
-			l_result : INTEGER
 		do
 			create l_arguments.make (2)
 			l_arguments.force (a_key)
@@ -1543,6 +1573,40 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			Result := read_multi_bulk_reply
 		end
 
+	zrange_withscores ( a_key : STRING; a_start : INTEGER; an_end: INTEGER) : LIST[TUPLE[STRING,STRING]]
+		--Time complexity: O(log(N))+O(M) (with N being the number of elements in the sorted set and M the number of elements requested)
+		--Return the specified elements of the sorted set at the specified key.
+		--The elements are considered sorted from the lowerest to the highest score when using ZRANGE,
+		--and in the reverse order when using ZREVRANGE. Start and end are zero-based indexes.
+		--0 is the first element of the sorted set (the one with the lowerest score when using ZRANGE),
+		--1 the next element by score and so on.
+		--start and end can also be negative numbers indicating offsets from the end of the sorted set.
+		--For example -1 is the last element of the sorted set, -2 the penultimate element and so on.
+		--Indexes out of range will not produce an error:
+		--if start is over the end of the sorted set, or start > end, an empty list is returned.
+		--If end is over the end of the sorted set Redis will threat it just like the last element of the sorted set.
+		--It's possible to pass the WITHSCORES option to the command in order to return not only the values but also
+		--the scores of the elements.
+		--Redis will return the data as a single list composed of value1,score1,value2,score2,...,valueN,scoreN
+		--but client libraries are free to return a more appropriate data type
+		--(what we think is that the best return type for this command is a Array of two-elements Array /
+		-- Tuple in order to preserve sorting).
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+		    create l_arguments.make (4)
+			l_arguments.force (a_key)
+			l_arguments.force (a_start.out)
+			l_arguments.force (an_end.out)
+			l_arguments.force (withscores)
+			send_command (zrange_command, l_arguments)
+			Result := response_range_withscore_internal
+		end
+
 	zrevrange ( a_key : STRING; a_start : INTEGER; an_end: INTEGER) : LIST[STRING]
 		--Time complexity: O(log(N))+O(M) (with N being the number of elements in the sorted set and M the number of elements requested)
 		--Return the specified elements of the sorted set at the specified key.
@@ -1562,7 +1626,6 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 		--(what we think is that the best return type for this command is a Array of two-elements Array /
 		-- Tuple in order to preserve sorting).
 		--
-		--TODO implement WITHSCORES!!!!
 		--
 		require
 			is_connected : is_connected
@@ -1579,6 +1642,39 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			Result := read_multi_bulk_reply
 		end
 
+	zrevrange_withscores ( a_key : STRING; a_start : INTEGER; an_end: INTEGER) : LIST[TUPLE[STRING,STRING]]
+		--Time complexity: O(log(N))+O(M) (with N being the number of elements in the sorted set and M the number of elements requested)
+		--Return the specified elements of the sorted set at the specified key.
+		--The elements are considered sorted from the lowerest to the highest score when using ZRANGE,
+		--and in the reverse order when using ZREVRANGE. Start and end are zero-based indexes.
+		--0 is the first element of the sorted set (the one with the lowerest score when using ZRANGE),
+		--1 the next element by score and so on.
+		--start and end can also be negative numbers indicating offsets from the end of the sorted set.
+		--For example -1 is the last element of the sorted set, -2 the penultimate element and so on.
+		--Indexes out of range will not produce an error:
+		--if start is over the end of the sorted set, or start > end, an empty list is returned.
+		--If end is over the end of the sorted set Redis will threat it just like the last element of the sorted set.
+		--It's possible to pass the WITHSCORES option to the command in order to return not only the values but also
+		--the scores of the elements.
+		--Redis will return the data as a single list composed of value1,score1,value2,score2,...,valueN,scoreN
+		--but client libraries are free to return a more appropriate data type
+		--(what we think is that the best return type for this command is a Array of two-elements Array /
+		-- Tuple in order to preserve sorting).
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+		    create l_arguments.make (4)
+			l_arguments.force (a_key)
+			l_arguments.force (a_start.out)
+			l_arguments.force (an_end.out)
+			l_arguments.force (withscores)
+			send_command (zrevrange_command, l_arguments)
+			Result := response_range_withscore_internal
+		end
 	zrangebyscore ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE) : LIST[STRING]
 		--Time complexity: O(log(N))+O(M) with N being the number of elements in the sorted set and M
 		--the number of elements returned by the command, so if M is constant
@@ -1613,6 +1709,61 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			Result := read_multi_bulk_reply
 		end
 
+	zrangebyscore_withscores ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE) : LIST[TUPLE[STRING,STRING]]
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (4)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			l_arguments.force (withscores)
+			send_command (zrangebyscore_command, l_arguments)
+			Result := response_range_withscore_internal
+		end
+
+	zrangebyscore_limit ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE; offset:INTEGER; count :INTEGER) : LIST[STRING]
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (6)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			l_arguments.force (limit)
+			l_arguments.force (offset.out)
+			l_arguments.force (count.out)
+			send_command (zrangebyscore_command, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+	zrangebyscore_limit_withscores ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE; offset:INTEGER; count :INTEGER) : LIST[TUPLE[STRING,STRING]]
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (7)
+			l_arguments.force (a_key)
+			l_arguments.force (a_min.out)
+			l_arguments.force (a_max.out)
+			l_arguments.force (limit)
+			l_arguments.force (offset.out)
+			l_arguments.force (count.out)
+			l_arguments.force (withscores)
+			send_command (zrangebyscore_command, l_arguments)
+			Result := response_range_withscore_internal
+		end
 
 	zcount ( a_key:STRING; a_min:DOUBLE; a_max:DOUBLE) : INTEGER
 		--Time complexity: O(log(N))+O(M) with N being the number of elements in the sorted set and M
@@ -1759,6 +1910,73 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			Result := read_integer_reply
 		end
 
+	zunionstore_weights ( a_key:STRING; arguments:ARRAY[STRING];a_weights:ARRAY[STRING]) : INTEGER
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			valid_weights : a_weights /= Void and then not a_weights.is_empty
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			i : INTEGER
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			l_arguments.force (weights)
+			from i := 1 until i > a_weights.count loop l_arguments.force (a_weights.at (i))
+				i := i + 1
+			end
+			send_command (zunionstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+	zunionstore_aggregate  ( a_key:STRING; arguments:ARRAY[STRING];an_aggregate : STRING) : INTEGER
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			is_valid_aggregate : an_aggregate /= Void  and then is_valid_aggregate_value (an_aggregate)
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			l_arguments.force (aggregate)
+			l_arguments.force (an_aggregate)
+			send_command (zunionstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	zunionstore_weights_aggregate ( a_key:STRING; arguments:ARRAY[STRING];a_weights:ARRAY[STRING];an_aggregate : STRING) : INTEGER
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			valid_weights : a_weights /= Void and then not a_weights.is_empty
+			is_valid_aggregate : an_aggregate /= Void  and then is_valid_aggregate_value (an_aggregate)
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			i : INTEGER
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			l_arguments.force (weights)
+			from i := 1 until i > a_weights.count loop l_arguments.force (a_weights.at (i))
+				i := i + 1
+			end
+			l_arguments.force (aggregate)
+			l_arguments.force (an_aggregate)
+			send_command (zunionstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
 	zinterstore ( a_key:STRING; arguments:ARRAY[STRING]) : INTEGER
 		--Time complexity: O(N) + O(M log(M)) with N being the sum of the sizes of the input sorted sets,
 		--and M being the number of elements in the resulting sorted set
@@ -1786,6 +2004,326 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			l_arguments.put_front (a_key)
 			send_command (zinterstore_command, l_arguments)
 			Result := read_integer_reply
+		end
+
+
+	zinterstore_weights ( a_key:STRING; arguments:ARRAY[STRING];a_weights:ARRAY[STRING]) : INTEGER
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			valid_weights : a_weights /= Void and then not a_weights.is_empty
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			i : INTEGER
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			l_arguments.force (weights)
+			from i := 1 until i > a_weights.count loop l_arguments.force (a_weights.at (i))
+				i := i + 1
+			end
+			send_command (zinterstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+	zinterstore_aggregate  ( a_key:STRING; arguments:ARRAY[STRING];an_aggregate : STRING) : INTEGER
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			is_valid_aggregate : an_aggregate /= Void  and then is_valid_aggregate_value (an_aggregate)
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			l_arguments.force (aggregate)
+			l_arguments.force (an_aggregate)
+			send_command (zinterstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	zinterstore_weights_aggregate ( a_key:STRING; arguments:ARRAY[STRING];a_weights:ARRAY[STRING];an_aggregate : STRING) : INTEGER
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_argument: arguments /= Void and then not arguments.is_empty
+			valid_weights : a_weights /= Void and then not a_weights.is_empty
+			is_valid_aggregate : an_aggregate /= Void  and then is_valid_aggregate_value (an_aggregate)
+			if_key_exists_type_is_zset : exists(a_key) implies (type (a_key) ~ type_zset)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			i : INTEGER
+		do
+			create l_arguments.make_from_array (arguments)
+			l_arguments.put_front (arguments.count.out)
+			l_arguments.put_front (a_key)
+			l_arguments.force (weights)
+			from i := 1 until i > a_weights.count loop l_arguments.force (a_weights.at (i))
+				i := i + 1
+			end
+			l_arguments.force (aggregate)
+			l_arguments.force (an_aggregate)
+			send_command (zinterstore_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+feature -- Redis Commands Operating on HASHES
+
+	hset (a_key : STRING; a_field:STRING; a_value:STRING) : INTEGER
+		--Time complexity: O(1)
+		--Set the specified hash field to the specified value.
+		--If key does not exist, a new key holding a hash is created.
+		--If the field already exists, and the HSET just produced an update of the value, 0 is returned, otherwise if a new field is created 1 is returned.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			a_field : a_field /= Void
+			a_value : a_value /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_field)
+			l_arguments.force (a_value)
+			send_command (hset_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Response :  Result = 1 or Result = 0
+		end
+
+	hget (a_key : STRING; a_field : STRING) : STRING
+		--Time complexity: O(1)
+		--If key holds a hash, retrieve the value associated to the specified field.
+	    --If the field is not found or the key does not exist, a special 'nil' value is returned.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_field : a_field /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_field)
+			send_command (hget_command, l_arguments)
+			Result := read_bulk_reply
+		end
+
+
+	hsetnx (a_key : STRING; a_field:STRING; a_value:STRING) : INTEGER
+		--Time complexity: O(1)
+		--Set the specified hash field to the specified value, if field does not exist yet.
+		--If key does not exist, a new key holding a hash is created.
+		--If the field already exists, this operation has no effect and returns 0.
+		--Otherwise, the field is set to value and the operation returns 1.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			a_field : a_field /= Void
+			a_value : a_value /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_field)
+			l_arguments.force (a_value)
+			send_command (hsetnx_command, l_arguments)
+			Result := read_integer_reply
+		ensure
+			Response :  Result = 1 or Result = 0
+		end
+
+	hmset ( a_key : STRING; fields_with_values : HASH_TABLE[STRING,STRING])
+		--Time complexity: O(N) (with N being the number of fields)
+		--Set the respective fields to the respective values. HMSET replaces old values with new values.
+		--If key does not exist, a new key holding a hash is created.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_field_with_values : fields_with_values /= Void and then not fields_with_values.is_empty
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_arguments.make (fields_with_values.count * 2)
+			l_arguments.force (a_key)
+			from
+				fields_with_values.start
+			until
+				fields_with_values.after
+			loop
+				l_arguments.force (fields_with_values.key_for_iteration)
+				l_arguments.force (fields_with_values.item_for_iteration)
+				fields_with_values.forth
+			end
+			send_command (hmset_command, l_arguments)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+	hmget ( a_key : STRING; a_fields:ARRAY[STRING]) : LIST [STRING]
+		--Time complexity: O(N) (with N being the number of fields)
+		--Retrieve the values associated to the specified fields.
+		--If some of the specified fields do not exist, nil values are returned.
+		--Non existing keys are considered like empty hashes.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_fields : a_fields /= Void and then not a_fields.is_empty
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make_from_array (a_fields)
+			l_arguments.put_front (a_key)
+			send_command (hmget_commmand, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+	hincrby ( a_key : STRING; a_field : STRING; a_value : INTEGER_64) : INTEGER
+		--Time complexity: O(1)
+		--Increment the number stored at field in the hash at key by value.
+		--If key does not exist, a new key holding a hash is created.
+		--If field does not exist or holds a string, the value is set to 0 before applying the operation.
+		--The range of values supported by HINCRBY is limited to 64 bit signed integers.
+		require
+			is_connected : is_connected
+			valid_valid : a_key /= Void
+			valid_field : a_field /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (3)
+			l_arguments.force (a_key)
+			l_arguments.force (a_field)
+			l_arguments.force (a_value.out)
+			send_command (hincrby_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	hexists ( a_key : STRING; a_field: STRING) : BOOLEAN
+		--Time complexity: O(1)
+		--Return 1 if the hash stored at key contains the specified field.
+		--Return 0 if the key is not found or the field is not present.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_field : a_field /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_field)
+			send_command (hexists_command, l_arguments)
+			Result := (read_integer_reply = 1)
+		end
+
+	hdel (a_key : STRING;  a_field:STRING) : INTEGER
+		--Time complexity: O(1)
+		--Remove the specified field from an hash stored at key.
+		--If the field was present in the hash it is deleted and 1 is returned,
+		--otherwise 0 is returned and no operation is performed.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			valid_field : a_field /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (a_key)
+			l_arguments.force (a_field)
+			send_command (hdel_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+	hlen (a_key : STRING ) : INTEGER
+		--Time complexity: O(1)
+		--Return the number of entries (fields) contained in the hash stored at key.
+		--If the specified key does not exist, 0 is returned assuming an empty hash.
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (hlen_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+
+	hgetall ( a_key : STRING) : LIST[STRING]
+		--Time complexity
+		--O(N) where N is the size of the hash.
+		--Returns all fields and values of the hash stored at key.
+		--In the returned value, every field name is followed by its value,
+		--so the length of the reply is twice the size of the hash.
+		-- TODO: return a hash_table[string,string]
+		require
+			valid_key : a_key /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (hgetall_command, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+
+	hkeys ( a_key : STRING) : LIST[STRING]
+		--Time complexity
+		--O(N) where N is the size of the hash.
+		--Returns all field names of the hash stored at key.
+		require
+			valid_key : a_key /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (hkeys_command, l_arguments)
+			Result := read_multi_bulk_reply
+		end
+
+	hvals ( a_key : STRING) : LIST[STRING]
+		--Time complexity
+		--O(N) where N is the size of the hash.
+		--Returns all values of the hash stored at key.
+		require
+			valid_key : a_key /= Void
+			if_key_exists_type_is_hash : exists(a_key) implies (type (a_key) ~ type_hash)
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_key)
+			send_command (hvals_command, l_arguments)
+			Result := read_multi_bulk_reply
 		end
 
 invariant
