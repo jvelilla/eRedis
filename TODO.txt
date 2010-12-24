@@ -103,28 +103,28 @@ Command 		Parameters 				Description
 /ZREVRANGE 		key start end 				Return a range of elements from the sorted set at key, exactly like ZRANGE, but the sorted set is ordered in traversed in reverse order, from the greatest to the smallest score
 /ZRANGEBYSCORE 		key min max 				Return all the elements with score >= min and score <= max (a range query) from the sorted set
 /ZCOUNT 		key min max 				Return the number of elements with score >= min and score <= max in the sorted set
-ZCARD 			key 					Return the cardinality (number of elements) of the sorted set at key
-ZSCORE 			key element 				Return the score associated with the specified element of the sorted set at key
-ZREMRANGEBYRANK 	key min max 				Remove all the elements with rank >= min and rank <= max from the sorted set
-ZREMRANGEBYSCORE 	key min max 				Remove all the elements with score >= min and score <= max from the sorted set
-ZUNIONSTORE / 
-ZINTERSTORE 		dstkey N key1 ... keyN WEIGHTS w1 ... 
+/ZCARD 			key 					Return the cardinality (number of elements) of the sorted set at key
+/ZSCORE 			key element 				Return the score associated with the specified element of the sorted set at key
+/ZREMRANGEBYRANK 	key min max 				Remove all the elements with rank >= min and rank <= max from the sorted set
+/ZREMRANGEBYSCORE 	key min max 				Remove all the elements with score >= min and score <= max from the sorted set
+/ZUNIONSTORE / 
+/ZINTERSTORE 		dstkey N key1 ... keyN WEIGHTS w1 ... 
 			wN AGGREGATE SUM|MIN|MAX 		Perform a union or intersection over a number of sorted sets with optional weight and aggregate
 
 Commands operating on hashes
 
 Command 	Parameters 					Description
-HSET 		key field value 				Set the hash field to the specified value. Creates the hash if needed.
-HGET 		key field 					Retrieve the value of the specified hash field.
-HMGET	 	key field1 ... fieldN 				Get the hash values associated to the specified fields.
-HMSET	 	key field1 value1 ... fieldN valueN 		Set the hash fields to their respective values.
-HINCRBY 	key field integer 				Increment the integer value of the hash at key on field with integer.
-HEXISTS 	key field 					Test for existence of a specified field in a hash
-HDEL 		key field 					Remove the specified field from a hash
-HLEN 		key 						Return the number of items in a hash.
-HKEYS	 	key 						Return all the fields in a hash.
-HVALS	 	key 						Return all the values in a hash.
-HGETALL 	key 						Return all the fields and associated values in a hash.
+/HSET 		key field value 				Set the hash field to the specified value. Creates the hash if needed.
+/HGET 		key field 					Retrieve the value of the specified hash field.
+/HMGET	 	key field1 ... fieldN 				Get the hash values associated to the specified fields.
+/HMSET	 	key field1 value1 ... fieldN valueN 		Set the hash fields to their respective values.
+/HINCRBY 	key field integer 				Increment the integer value of the hash at key on field with integer.
+/HEXISTS 	key field 					Test for existence of a specified field in a hash
+/HDEL 		key field 					Remove the specified field from a hash
+/HLEN 		key 						Return the number of items in a hash.
+/HKEYS	 	key 						Return all the fields in a hash.
+/HVALS	 	key 						Return all the values in a hash.
+/HGETALL 	key 						Return all the fields and associated values in a hash.
 
 Sorting
 
