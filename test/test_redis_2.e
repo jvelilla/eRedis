@@ -16,7 +16,10 @@ inherit
 			on_prepare,
 			on_clean
 		end
-
+	REDIS_CONFIG_PARAMETERS
+		undefine
+			default_create
+		end
 
 feature {NONE} -- Events
 
@@ -31,6 +34,7 @@ feature {NONE} -- Events
 	on_clean
 			-- <Precursor>
 		do
+			redis.flush_all
 			redis.close
 		end
 
@@ -367,8 +371,37 @@ test_redis_commands_commons_and_string
 		end
 
 
+feature -- Redis Connection
+	test_echo
+		do
+			assert ("Expected echo", redis.echo ("echo") ~ "echo")
+		end
 
+
+	test_ping
+		do
+			assert ("Expected PONG", redis.ping  ~ "PONG")
+		end
+
+
+	test_auth
+		--AUTH password
+		--Authenticate to the server  	
+		do
+			redis.auth ("password")
+			assert ("Not has error", not redis.has_error)
+		end
 feature -- Redis Common Operations
+
+	test_renamenx
+		--RENAMENX key newkey
+		--Rename a key, only if the new key does not exist
+		do
+			redis.set ("k","val")
+			assert ("Expected 1", redis.renamenx("k","newk") = 1)
+			assert ("Expected False", not redis.exists ("k"))
+		end
+
 	rename_keys_old_and_new_are_differents
 		do
 			redis.set ("oldkey", "value")
@@ -1332,10 +1365,166 @@ feature -- testing hsets
 			assert ("Expected empty", l_result.is_empty)
 		end
 
+feature -- Remote Server Controls
 
+	test_info
+		--INFO 		
+		--Provide information and statistics about the server
+		do
+			assert ("Expected Not Void", redis.info /= Void)
+		end
+
+
+	test_bgrewriteaof
+		--BGREWRITEAOF
+		--Asynchronously rewrite the append-only file  	
+		do
+			redis.bgrewriteaof
+			assert ("Expected has not error", not redis.has_error)
+		end
+
+	test_bgsave
+		--BGSAVE
+		--Asynchronously save the dataset to disk
+		do
+			redis.bgsave
+			assert ("Expected has not error", not redis.has_error)
+		end
+
+	test_config_get_all
+		--CONFIG GET   parameter
+		--Get the value of a configuration parameter  	
+		local
+			l_result : LIST [STRING]
+		do
+			l_result := redis.config_get ("*")
+			assert("Expected 16 elements", l_result.count = 16)
+		end
+
+	test_config_get_maxmemory
+		--CONFIG GET   parameter
+		--Get the value of a configuration parameter  	
+		local
+			l_result : LIST [STRING]
+		do
+			l_result := redis.config_get (maxmemory)
+			assert("Expected 2 elements", l_result.count = 2)
+			assert("Expected maxmemory",  l_result.at (1) ~ maxmemory)
+			assert("Expected >= 0",  l_result.at (2).to_integer_64 >= 0)
+		end
+
+
+	test_config_get_paramater_does_not_exists_should_be_empty
+		--CONFIG GET   parameter
+		--Get the value of a configuration parameter  	
+		local
+			l_result : LIST [STRING]
+		do
+			l_result := redis.config_get ("notexists")
+			assert("Expected empty", l_result.is_empty)
+		end
+
+
+	test_config_set
+		-- CONFIG SET   parameter value
+		-- Set a configuration parameter to the given value
+		local
+			l_result : LIST [STRING]
+		do
+			redis.config_set ( maxmemory, "10")
+			l_result := redis.config_get (maxmemory)
+			assert ("Expected 10", l_result.at (2).to_integer_64 = 10)
+
+			redis.config_set ( maxmemory, "0")
+			l_result := redis.config_get (maxmemory)
+			assert ("Expected 0", l_result.at (2).to_integer_64 = 0)
+		end
+
+
+	test_config_set_wrong
+		-- CONFIG SET   parameter value
+		-- Set a configuration parameter to the given value
+		do
+			redis.config_set ( "notexist", "10")
+			assert("Expected error", redis.has_error)
+		end
+
+	test_config_resetstat
+		--CONFIG RESETSTAT
+		--Reset the stats returned by INFO  	
+		do
+			redis.config_resetstat
+			assert("Expected not error", not redis.has_error)
+		end
+
+	test_debug_object
+		--DEBUG OBJECT key
+		--Get debugging information about a key
+		local
+			l_result : STRING
+		do
+			redis.set ("k", "v")
+			l_result := redis.debug_object ("k")
+			assert ("Expected not empty", not l_result.is_empty)
+		end
+
+--	test_debug_segfault
+--		--DEBUG SEGFAULT
+--		--Make the server crash  	
+--		do
+--			redis.debug_segfault
+--			assert("Expected not error", not redis.has_error)
+--		end
+
+	test_lastsave
+		--LASTSAVE
+		--Get the UNIX time stamp of the last successful save to disk
+		do
+			assert ("Expected greater than cero", redis.lastsave >= 0)
+		end
+
+	test_monitor
+		--MONITOR
+		--Listen for all requests received by the server in real time
+		do
+
+		end
+
+	test_save
+		--SAVE
+		--Synchronously save the dataset to disk
+		do
+			redis.save
+			assert("Expected not error", not redis.has_error)
+		end
+
+
+--	test_shutdown
+--		--SHUTDOWN
+--		--Synchronously save the dataset to disk and then shut down the server
+--		do
+--			redis.shutdown
+--			assert("Expected not error", not redis.has_error)
+--		end
+
+	test_slaveof
+		--SLAVEOF   host port
+		--Make the server a slave of another instance, or promote it as master
+		do
+			redis.slaveof (host, port)
+			assert("Expected not error", not redis.has_error)
+		end
+
+	test_sync
+		--SYNC
+		--Internal command used for replication  	
+		do
+
+		end
+		
 feature {NONE} -- Implemention
 	port : INTEGER = 6379
-	host : STRING =  "192.168.211.237"
+	host : STRING =  "192.168.211.243"
 end
 
 

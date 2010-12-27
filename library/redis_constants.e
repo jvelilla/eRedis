@@ -29,12 +29,16 @@ feature -- Commands
 	KEYS_Command			: STRING = "KEYS"
 	RANDOMKEY_Command		: STRING = "RANDOMKEY"
 	RENAME_Command			: STRING = "RENAME"
+	RENAMENX_Command		: STRING = "RENAMENX"
 	DBSIZE_Command			: STRING = "DBSIZE"
 	SELECT_Command			: STRING = "SELECT"
 	QUIT_Command			: STRING = "QUIT"
+	ECHO_Command			: STRING = "ECHO"
+	PING_Command			: STRING = "PING"
+	AUTH_Command			: STRING = "AUTH"
 	TTL_Command				: STRING = "TTL"
 	EXPIRE_Command			: STRING = "EXPIRE"
-	PERSIST_Command			: STRING = "PERSIST" -- actually not supported
+	PERSIST_Command			: STRING = "PERSIST"
 	MOVE_Command			: STRING = "MOVE"
 	RPUSH_Command			: STRING = "RPUSH"
 	LPUSH_Command			: STRING = "LPUSH"
@@ -90,6 +94,19 @@ feature -- Commands
 	HGETALL_Command			: STRING = "HGETALL"
 	HKEYS_Command			: STRING = "HKEYS"
 	HVALS_Command			: STRING = "HVALS"
+	INFO_Command			: STRING = "INFO"
+	BGREWRITEAOF_Command	: STRING = "BGREWRITEAOF"
+	BGSAVE_Command			: STRING = "BGSAVE"
+	CONFIG_GET_Command,
+	CONFIG_SET_Command,
+	CONFIG_RESETSTAT_Command
+							: STRING = "CONFIG"
+	DEBUG_OBJECT_Command,
+	DEBUG_SEGFAULT_Command	: STRING = "DEBUG"
+	LASTSAVE_Command		: STRING = "LASTSAVE"
+	SAVE_Command			: STRING = "SAVE"
+	SHUTDOWN_Command		: STRING = "SHUTDOWN"
+	SLAVEOF_Command			: STRING = "SLAVEOF"
 
 	Redis_commands : ARRAY[STRING]
 		-- List of valid redis commands
@@ -104,7 +121,10 @@ feature -- Commands
 				zadd_command,zrem_command,zincrby_command,zrank_command,zrevrank_command,zrange_command,zrevrange_command,zrangebyscore_command,
 				zcount_command,zcard_command,zscore_command,zremrangebyrank_command,zremrangebyscore_command,zunionstore_command,
 				zinterstore_command,hset_command,hget_command,hsetnx_command,hmset_command,hmget_commmand,hincrby_command,hexists_command,
-				hdel_command,hlen_command,hgetall_command,hkeys_command,hvals_command>>
+				hdel_command,hlen_command,hgetall_command,hkeys_command,hvals_command,info_command,renamenx_command,
+				echo_command,ping_command,auth_command,bgrewriteaof_command,bgsave_command,config_get_command,config_set_command,
+				config_resetstat_command,debug_object_command,debug_segfault_command,lastsave_command,save_command,shutdown_command,
+				slaveof_command>>
 		end
 
 	WITHSCORES		: STRING ="WITHSCORES"

@@ -342,16 +342,95 @@ feature -- Status Report
 
 feature -- Redis Connection Handling
 
+	auth ( a_password : STRING)
+		--Request for authentication in a password protected Redis server.
+		--A Redis server can be instructed to require a password before to allow clients to issue commands.
+		--This is done using the requirepass directive in the Redis configuration file.
+		--If the password given by the client is correct the server replies with an OK status code reply
+		--and starts accepting commands from the client.
+		--Otherwise an error is returned and the clients needs to try a new password.
+		--Note that for the high performance nature of Redis it is possible to try a lot of passwords in parallel
+		--in very short time, so make sure to generate a strong and very long password so that this attack is infeasible.
+		require
+			is_connected : is_connected
+			valid_password : a_password /= Void
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+			l_reply : STRING
+		do
+			create l_arguments.make (1)
+			l_arguments.force (a_password)
+			send_command (auth_command, l_arguments)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
 	quit
 		-- Ask the server to silently close the connection.
 		local
 			l_arguments : ARRAYED_LIST[STRING]
+			l_reply : STRING
 		do
 			create l_arguments.make (0)
 			send_command (quit_command, l_arguments)
+			l_reply := read_status_reply
+			check_reply (l_reply)
 		end
 
-feature -- Redis Commands operating on all value types
+	echo ( a_message : STRING) : STRING
+		--Echo the given string
+		require
+			is_connected : is_connected
+			valid_message : a_message /= Void
+		 local
+		 	l_arguments : ARRAYED_LIST [STRING]
+		 do
+		 	create l_arguments.make (1)
+		 	l_arguments.force (a_message)
+		 	send_command (echo_command, l_arguments)
+		 	Result := read_bulk_reply
+		 ensure
+		 	echo_response : Result ~ a_message
+		 end
+
+
+	ping : STRING
+		-- Ping the server
+		require
+			is_connected : is_connected
+		 local
+		 	l_arguments : ARRAYED_LIST [STRING]
+		 	l_result : STRING
+		 do
+		 	create l_arguments.make (0)
+		 	send_command (ping_command, l_arguments)
+		 	l_result := read_status_reply
+		 	Result :=  l_result.substring (2, l_result.count-1)
+		 ensure
+		 	ping_response : Result ~ "PONG"
+		 end
+
+
+
+	select_db ( an_index : INTEGER)
+		-- Select the DB with having the specified zero-based numeric index.
+		-- For default every new client connection is automatically selected to DB 0. 	
+		require
+			is_connected : is_connected
+			valid_index: an_index >= 0
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+			reply : STRING
+		do
+			create l_arguments.make (1)
+			l_arguments.force (an_index.out)
+			send_command (select_command,l_arguments)
+			reply := read_status_reply
+			check_reply (reply)
+		end
+
+
+feature -- Redis Commands Keys
 
 	exists (a_key : STRING) : BOOLEAN
 		-- Test if the specified key exists.
@@ -440,6 +519,24 @@ feature -- Redis Commands operating on all value types
 			check_reply (reply)
 		end
 
+
+	renamenx ( an_old_key : STRING; a_new_key : STRING) : INTEGER
+		-- O(1) Renames key to newkey if newkey does not yet exist.
+		-- It returns an error under the same conditions as RENAME.
+		require
+			is_connected : is_connected
+			valid_keys : an_old_key /= Void and then a_new_key /= Void
+			not_equals : not (an_old_key ~ a_new_key)
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (2)
+			l_arguments.force (an_old_key)
+			l_arguments.force (a_new_key)
+			send_command (renamenx_command,l_arguments)
+			Result := read_integer_reply
+		end
+
 	keys ( a_pattern : STRING) : LIST[STRING]
 		-- Returns all the keys matching the glob-style pattern as space separated strings.
 		require
@@ -466,35 +563,6 @@ feature -- Redis Commands operating on all value types
 			create l_arguments.make (0)
 			send_command (randomkey_command, l_arguments)
 			Result := read_bulk_reply
-		end
-
-	db_size: INTEGER
-		-- Return the number of keys in the currently selected database.
-		require
-			is_connected : is_connected
-		local
-			l_arguments: ARRAYED_LIST[STRING]
-		do
-			create l_arguments.make (0)
-			send_command (dbsize_command, l_arguments)
-			Result := read_integer_reply
-		end
-
-	select_db ( an_index : INTEGER)
-		-- Select the DB with having the specified zero-based numeric index.
-		-- For default every new client connection is automatically selected to DB 0. 	
-		require
-			is_connected : is_connected
-			valid_index: an_index >= 0
-		local
-			l_arguments : ARRAYED_LIST[STRING]
-			reply : STRING
-		do
-			create l_arguments.make (1)
-			l_arguments.force (an_index.out)
-			send_command (select_command,l_arguments)
-			reply := read_status_reply
-			check_reply (reply)
 		end
 
 	expire (a_key : STRING; a_seconds : INTEGER)
@@ -555,37 +623,7 @@ feature -- Redis Commands operating on all value types
 			end
 		end
 
-	flush_db
-		-- Delete all the keys of the currently selected DB.
-		require
-			is_connected : is_connected
-		local
-			l_arguments : ARRAYED_LIST[STRING]
-			reply : STRING
-		do
-			create l_arguments.make (0)
-			send_command (flush_db_command, l_arguments)
-			reply := read_status_reply
-			check_reply (reply)
-		ensure
-			-- redis.db_size = 0
-		end
 
-	flush_all
-		-- Delete all the keys of all the existing databases, not just the currently selected one.
-		require
-			is_connected : is_connected
-		local
-			l_arguments : ARRAYED_LIST[STRING]
-			reply : STRING
-		do
-			create l_arguments.make (0)
-			send_command (flush_all_command, l_arguments)
-			reply := read_status_reply
-			check_reply (reply)
-		ensure
-			--for all db's redis.db_size = 0
-		end
 
 feature -- Redis Commands Operating on Strings
 
@@ -2324,6 +2362,252 @@ feature -- Redis Commands Operating on HASHES
 			l_arguments.force (a_key)
 			send_command (hvals_command, l_arguments)
 			Result := read_multi_bulk_reply
+		end
+
+feature -- Redis Server Command
+
+	flush_db
+		-- Delete all the keys of the currently selected DB.
+		require
+			is_connected : is_connected
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+			reply : STRING
+		do
+			create l_arguments.make (0)
+			send_command (flush_db_command, l_arguments)
+			reply := read_status_reply
+			check_reply (reply)
+		ensure
+			-- redis.db_size = 0
+		end
+
+	flush_all
+		-- Delete all the keys of all the existing databases, not just the currently selected one.
+		require
+			is_connected : is_connected
+		local
+			l_arguments : ARRAYED_LIST[STRING]
+			reply : STRING
+		do
+			create l_arguments.make (0)
+			send_command (flush_all_command, l_arguments)
+			reply := read_status_reply
+			check_reply (reply)
+		ensure
+			--for all db's redis.db_size = 0
+		end
+
+	info : STRING
+		require
+			is_connected : is_connected
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+		do
+			create l_arguments.make (0)
+			send_command (info_command, l_arguments)
+			Result := read_bulk_reply
+		end
+
+
+	bgrewriteaof
+		--Rewrites the append-only file to reflect the current dataset in memory.
+		--If BGREWRITEAOF fails, no data gets lost as the old AOF will be untouched.
+		require
+			is_connected : is_connected
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_arguments.make (0)
+			send_command (bgrewriteaof_command, l_arguments)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	bgsave
+		--Save the DB in background.
+		--The OK code is immediately returned.
+		--Redis forks, the parent continues to server the clients, the child saves the DB on disk then exit.
+		--A client my be able to check if the operation succeeded using the LASTSAVE command.
+		require
+			is_connected : is_connected
+		local
+			l_arguments : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_arguments.make (0)
+			send_command (bgsave_command, l_arguments)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	config_get ( a_parameter : STRING) : LIST [STRING]
+		--Get the value of a configuration parameter
+		require
+			is_connected : is_connected
+			valid_parameter : a_parameter /= Void
+		local
+			l_argument : ARRAYED_LIST [STRING]
+		do
+			create l_argument.make (2)
+			l_argument.force ("GET")
+			l_argument.force (a_parameter)
+
+			send_command (config_get_command, l_argument)
+			Result := read_multi_bulk_reply
+		end
+
+
+	config_set ( a_parameter : STRING; a_value:STRING)
+		--CONFIG SET   parameter value
+		--Set a configuration parameter to the given value
+		require
+			is_connected : is_connected
+			valid_parameter : a_parameter /= Void
+            valid_value		: a_value /= Void
+            -- TODO add precondition valid parameter
+		local
+			l_argument : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_argument.make (3)
+			l_argument.force ("SET")
+			l_argument.force (a_parameter)
+			l_argument.force (a_value)
+
+			send_command (config_set_command, l_argument)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	config_resetstat
+		--O(1).
+		--Resets the statistics reported by Redis using the INFO command.
+		--These are the counters that are reset:
+		--    * Keyspace hits
+		--    * Keyspace misses
+		--    * Number of commands processed
+		--    * Number of connections received
+		--    * Number of expired keys
+		require
+			is_connected : is_connected
+		local
+			l_argument : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_argument.make (1)
+			l_argument.force ("RESETSTAT")
+
+			send_command (config_resetstat_command, l_argument)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	db_size: INTEGER
+		-- Return the number of keys in the currently selected database.
+		require
+			is_connected : is_connected
+		local
+			l_arguments: ARRAYED_LIST[STRING]
+		do
+			create l_arguments.make (0)
+			send_command (dbsize_command, l_arguments)
+			Result := read_integer_reply
+		end
+
+	debug_object ( a_key : STRING) : STRING
+		--Get debugging information about a key
+		require
+			is_connected : is_connected
+			valid_key : a_key /= Void
+			exists_key : exists (a_key)
+		local
+			l_argument : ARRAYED_LIST[STRING]
+		do
+			create l_argument.make (2)
+			l_argument.force ("OBJECT")
+			l_argument.force (a_key)
+			send_command (debug_object_command, l_argument)
+			Result := read_status_reply
+		end
+
+
+	debug_segfault
+		require
+			is_connected : is_connected
+		local
+			l_argument : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_argument.make (1)
+			l_argument.force ("SEGFAULT")
+			send_command (debug_segfault_command, l_argument)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	lastsave : INTEGER_64
+		--Get the UNIX time stamp of the last successful save to disk
+		require
+			is_connected : is_connected
+		local
+			l_argument : ARRAYED_LIST [STRING]
+		do
+			create l_argument.make (0)
+			send_command (lastsave_command, l_argument)
+			Result := read_integer_reply
+		end
+
+	save
+		-- Synchronously save the dataset to disk
+		require
+			is_connected : is_connected
+		local
+			l_argument : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_argument.make (0)
+			send_command (save_command, l_argument)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	shutdown
+		--Synchronously save the dataset to disk and then shut down the server
+		require
+			is_connected : is_connected
+		local
+			l_argument : ARRAYED_LIST[STRING]
+			l_reply : STRING
+		do
+			create l_argument.make (0)
+			send_command (shutdown_command, l_argument)
+			l_reply := read_status_reply
+			check_reply (l_reply)
+		end
+
+
+	slaveof (a_host : STRING; a_port: INTEGER)
+		--
+		require
+			is_connected : is_connected
+		local
+			l_argument : ARRAYED_LIST [STRING]
+			l_reply : STRING
+		do
+			create l_argument.make (2)
+			l_argument.force (a_host)
+			l_argument.force (a_port.OUT)
+			send_command (slaveof_command, l_argument)
+			l_reply := read_status_reply
+			check_reply (l_reply)
 		end
 
 invariant

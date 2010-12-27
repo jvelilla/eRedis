@@ -14,16 +14,18 @@ create
 
 feature {NONE} -- Initialization
 
-	r: TEST_REDIS_2
-
+	r: REDIS_API
+	port : INTEGER = 6379
+	host : STRING =  "192.168.211.241"
 	make
 			-- Run application.
 		do
-		 print ("%Ntesting command list%N")
-		 test_commands_on_list
-		 print ("%Ntesting commands common %N")
-		 test_redis_commands_commons_and_string
-
+--		 print ("%Ntesting command list%N")
+--		 test_commands_on_list
+--		 print ("%Ntesting commands common %N")
+--		 test_redis_commands_commons_and_string
+		 create r.make_client_by_port (port, host)
+		 print ("%N" + r.info)
 		end
 
 
