@@ -6,6 +6,7 @@ note
 	date: "$Date$"
 	revision: "$Revision$"
 	test: "type/manual"
+	testing:"execution/serial"
 
 class
 	TEST_REDIS_2
@@ -76,7 +77,7 @@ feature -- String operations
 
 	get_multiple_values_what_where_set
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			redis.set ("key1", "value1")
 			redis.set ("key2", "value2")
@@ -93,7 +94,7 @@ feature -- String operations
 
 	get_multiple_values_what_where_set_and_key_does_not_exist
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			redis.set ("key1", "value5")
 			redis.set ("key2", "value6")
@@ -109,7 +110,7 @@ feature -- String operations
 
 	get_multiple_values_what_where_multi_set
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable  STRING]
 			l_params : HASH_TABLE[STRING,STRING]
 		do
 			create l_params.make (4)
@@ -160,7 +161,7 @@ feature -- String operations
 
 	get_keys_using_pattern
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			redis.set ("foo", "value")
 			redis.set ("foobar","value")
@@ -174,7 +175,7 @@ test_redis_commands_commons_and_string
 			-- New test routine
 		local
 			params : HASH_TABLE [STRING_8, STRING_8]
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 			l_number_keys : INTEGER
 			i : INTEGER
 		do
@@ -499,7 +500,7 @@ feature -- Redis Operations on List
 
 	test_lrange
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.lpush ("key1", "value1"))
 			assert("Expected 2", 2 = redis.lpush ("key1", "value2"))
@@ -674,7 +675,7 @@ feature -- Redis Operations on Sets
 		-- SINTER key1 key2 ... keyN 				
 		-- Return the intersection between the Sets stored at key1, key2, ..., keyN
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			--Set Key= [a,b,c]
 			assert("Expected 1", 1=redis.sadd ("key", "a"))
@@ -727,7 +728,7 @@ feature -- Redis Operations on Sets
 		--SUNION key1 key2 ... keyN 				
 		--Return the union between the Sets stored at key1, key2, ..., keyN	
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			--Set Key= [a,b,c]
 			assert("Expected 1", 1=redis.sadd ("key", "a"))
@@ -762,7 +763,7 @@ feature -- Redis Operations on Sets
 		--SDIFF key1 key2 ... keyN 				
 		--Return the difference between the Set stored at key1 and all the Sets key2, ..., keyN
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			--Set Key= [a,b,c]
 			assert("Expected 1", 1=redis.sadd ("key", "a"))
@@ -801,7 +802,7 @@ feature -- Redis Operations on Sets
 		--SMEMBERS 	key 						
 		--Return all the members of the Set value at key
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			--Set Key= [a,b,c]
 			assert("Expected 1", 1=redis.sadd ("key", "a"))
@@ -890,7 +891,7 @@ feature	-- Sorted Sets
 		--ZRANGE key start end 				
 		--Return a range of elements from the sorted set at key
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -910,8 +911,8 @@ feature	-- Sorted Sets
 		--ZRANGE key start end 				
 		--Return a range of elements from the sorted set at key
 		local
-			l_result : LIST [TUPLE[STRING,STRING]]
-			l_tuple : TUPLE[STRING,STRING]
+			l_result : LIST [TUPLE[detachable STRING, detachable STRING]]
+			l_tuple : TUPLE[detachable STRING, detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -935,7 +936,7 @@ feature	-- Sorted Sets
 		--ZRANGE key start end 				
 		--Return a range of elements from the sorted set at key
 		local
-			l_result : LIST [TUPLE[STRING,STRING]]
+			l_result : LIST [TUPLE[detachable STRING,detachable STRING]]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -954,7 +955,7 @@ feature	-- Sorted Sets
 		--Return a range of elements from the sorted set at key, exactly like ZRANGE,
 		--but the sorted set is ordered in traversed in reverse order, from the greatest to the smallest score
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -974,8 +975,8 @@ feature	-- Sorted Sets
 		--ZRANGE key start end 				
 		--Return a range of elements from the sorted set at key
 		local
-			l_result : LIST [TUPLE[STRING,STRING]]
-			l_tuple : TUPLE[STRING,STRING]
+			l_result : LIST [TUPLE[detachable STRING,detachable STRING]]
+			l_tuple : TUPLE[detachable STRING,detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -998,7 +999,7 @@ feature	-- Sorted Sets
 		--ZRANGE key start end 				
 		--Return a range of elements from the sorted set at key
 		local
-			l_result : LIST [TUPLE[STRING,STRING]]
+			l_result : LIST [TUPLE[detachable STRING,detachable STRING]]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -1017,7 +1018,7 @@ feature	-- Sorted Sets
 		--ZRANGEBYSCORE key min max 				
 		--Return all the elements with score >= min and score <= max (a range query) from the sorted set
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -1038,7 +1039,7 @@ feature	-- Sorted Sets
 		--ZRANGEBYSCORE key min max 				
 		--Return all the elements with score >= min and score <= max (a range query) from the sorted set
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			assert("Expected 1", 1 = redis.zadd ("key", 1, "value1"))
 			assert("Expected 1", 1 = redis.zadd ("key", 5, "value2"))
@@ -1231,7 +1232,7 @@ feature -- testing hsets
 		--Get the hash values associated to the specified fields.
 		local
 			l_field_values : HASH_TABLE[STRING,STRING]
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			create l_field_values.make (4)
 			l_field_values.put ("v", "f")
@@ -1283,7 +1284,7 @@ feature -- testing hsets
 		--HGETALL 	key 						
 		--Return all the fields and associated values in a hash.
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
 			assert("Expect 1", 1 = redis.hset ("k", "f1", "v"))
@@ -1300,7 +1301,7 @@ feature -- testing hsets
 		--HGETALL 	key 						
 		--Return all the fields and associated values in a hash.
 		local
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			l_result := redis.hgetall ("k")
 			assert ("Expected Empty list", l_result.is_empty)
@@ -1310,7 +1311,7 @@ feature -- testing hsets
 		--HKEYS	key 						
 		--Return all the fields in a hash.
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
 			assert("Expect 1", 1 = redis.hset ("k", "f1", "v"))
@@ -1329,7 +1330,7 @@ feature -- testing hsets
 		--HKEYS	key 						
 		--Return all the fields in a hash.
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			l_result := redis.hkeys ("k")
 			assert ("Expected empty", l_result.is_empty)
@@ -1340,7 +1341,7 @@ feature -- testing hsets
 		--HVALS key 						
 		--Return all the values in a hash
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			assert("Expect 1", 1 = redis.hset ("k", "f", "v"))
 			assert("Expect 1", 1 = redis.hset ("k", "f1", "v1"))
@@ -1359,7 +1360,7 @@ feature -- testing hsets
 		--HVALS key 						
 		--Return all the values in a hash
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			l_result := redis.hvals ("k")
 			assert ("Expected empty", l_result.is_empty)
@@ -1395,7 +1396,7 @@ feature -- Remote Server Controls
 		--CONFIG GET   parameter
 		--Get the value of a configuration parameter  	
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			l_result := redis.config_get ("*")
 			assert("Expected 16 elements", l_result.count = 16)
@@ -1405,7 +1406,7 @@ feature -- Remote Server Controls
 		--CONFIG GET   parameter
 		--Get the value of a configuration parameter  	
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			l_result := redis.config_get (maxmemory)
 			assert("Expected 2 elements", l_result.count = 2)
@@ -1418,7 +1419,7 @@ feature -- Remote Server Controls
 		--CONFIG GET   parameter
 		--Get the value of a configuration parameter  	
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			l_result := redis.config_get ("notexists")
 			assert("Expected empty", l_result.is_empty)
@@ -1429,7 +1430,7 @@ feature -- Remote Server Controls
 		-- CONFIG SET   parameter value
 		-- Set a configuration parameter to the given value
 		local
-			l_result : LIST [STRING]
+			l_result : LIST [detachable STRING]
 		do
 			redis.config_set ( maxmemory, "10")
 			l_result := redis.config_get (maxmemory)
@@ -1521,10 +1522,10 @@ feature -- Remote Server Controls
 		do
 
 		end
-		
+
 feature {NONE} -- Implemention
 	port : INTEGER = 6379
-	host : STRING =  "192.168.211.243"
+	host : STRING =  "127.0.0.1"
 end
 
 
