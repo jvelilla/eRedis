@@ -296,7 +296,7 @@ test_redis_commands_commons_and_string
 	test_incr_requirements
 		do
 			redis.set ("key1", "hola")
-			if redis.exists("key1") implies( (redis.type ("key1") ~ redis.type_string) and then redis.get("key1").is_integer_64 ) then
+			if redis.exists("key1") implies( (redis.type ("key1") ~ redis.type_string) and then attached redis.get("key1") as l_key and then l_key.is_integer_64 ) then
 				assert("Not expected", False)
 			else
 				assert("Expected true",true)
@@ -411,10 +411,21 @@ feature -- Redis Common Operations
 		end
 
 	rename_keys_old_and_new_are_equals_should_fail
+		local
+			l_retry: BOOLEAN
 		do
-			redis.set ("oldkey", "value")
-			redis.rename_key ("oldkey","oldkey")
-			assert ("not implemented", False)
+			if not l_retry then
+				redis.set ("oldkey", "value")
+				redis.rename_key ("oldkey","oldkey")
+				assert ("Not expected", False)
+			else
+				assert ("Expected failed precondition", True)
+			end
+		rescue
+			if not l_retry then
+				l_retry := true
+				retry
+			end
 		end
 
 	get_the_number_of_key_after_set_should_be_one_more_key
@@ -1411,7 +1422,7 @@ feature -- Remote Server Controls
 			l_result := redis.config_get (maxmemory)
 			assert("Expected 2 elements", l_result.count = 2)
 			assert("Expected maxmemory",  l_result.at (1) ~ maxmemory)
-			assert("Expected >= 0",  l_result.at (2).to_integer_64 >= 0)
+			assert("Expected >= 0",  attached l_result.at (2) as l_res and then l_res.to_integer_64 >= 0)
 		end
 
 
@@ -1434,11 +1445,11 @@ feature -- Remote Server Controls
 		do
 			redis.config_set ( maxmemory, "10")
 			l_result := redis.config_get (maxmemory)
-			assert ("Expected 10", l_result.at (2).to_integer_64 = 10)
+			assert ("Expected 10", attached l_result.at (2) as l_res  and then l_res.to_integer_64 = 10)
 
 			redis.config_set ( maxmemory, "0")
 			l_result := redis.config_get (maxmemory)
-			assert ("Expected 0", l_result.at (2).to_integer_64 = 0)
+			assert ("Expected 0", attached l_result.at (2) as l_res and then l_res.to_integer_64 = 0)
 		end
 
 

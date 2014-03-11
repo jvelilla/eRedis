@@ -74,12 +74,12 @@ feature {NONE} -- Implementation
 
 	get_integer (a_key: STRING): INTEGER
 		require
-			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then get (a_key).is_integer_64)
+			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then attached get (a_key) as l_key and then l_key.is_integer_64)
 		do
 			if not exists (a_key) then
 				Result := 0
-			else
-				Result := get (a_key).to_integer
+			elseif attached get (a_key)as l_key then
+				Result := l_key.to_integer
 			end
 		end
 
@@ -500,7 +500,7 @@ feature -- Redis Commands Keys
 		require
 			is_connected: is_connected
 			valid_keys: an_old_key /= Void and then a_new_key /= Void
-			not_equals: not (an_old_key ~ a_new_key)
+			not_equals: not (an_old_key.same_string (a_new_key))
 		local
 			l_arguments: ARRAYED_LIST [STRING]
 			reply: STRING
@@ -795,7 +795,7 @@ feature -- Redis Commands Operating on Strings
 		require
 			is_connected: is_connected
 			valid_keys: a_key /= Void
-			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then get (a_key).is_integer_64)
+			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then attached get (a_key) as l_key and then l_key.is_integer_64)
 		local
 			l_arguments: ARRAYED_LIST [STRING]
 		do
@@ -813,7 +813,7 @@ feature -- Redis Commands Operating on Strings
 		require
 			is_connected: is_connected
 			valid_keys: a_key /= Void
-			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then get (a_key).is_integer_64)
+			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then attached get (a_key) as l_key and then l_key.is_integer_64)
 		local
 			l_arguments: ARRAYED_LIST [STRING]
 		do
@@ -832,7 +832,7 @@ feature -- Redis Commands Operating on Strings
 		require
 			is_connected: is_connected
 			valid_keys: a_key /= Void
-			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then get (a_key).is_integer_64)
+			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then attached get (a_key) as l_key and then l_key.is_integer_64)
 		local
 			l_arguments: ARRAYED_LIST [STRING]
 		do
@@ -850,7 +850,7 @@ feature -- Redis Commands Operating on Strings
 		require
 			is_connected: is_connected
 			valid_keys: a_key /= Void
-			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then get (a_key).is_integer_64)
+			if_exist_is_valid_key_and_value: exists (a_key) implies ((type (a_key) ~ type_string) and then attached get (a_key) as l_key and then l_key.is_integer_64)
 		local
 			l_arguments: ARRAYED_LIST [STRING]
 		do
@@ -2579,7 +2579,7 @@ feature -- Redis Server Command
 		end
 
 invariant
-	non_empty_description: has_error implies (error_description /= Void and (not error_description.is_empty))
+	non_empty_description: has_error implies (attached error_description as l_error_description and then (not l_error_description.is_empty))
 	socket_valid: socket /= Void
 
 end
