@@ -24,6 +24,7 @@ feature -- Initialization
 		do
 			create socket.make_client_by_port (default_peer_port, a_host)
 			socket.connect
+			create last_reply.make_empty
 		ensure
 			is_connected: socket.is_connected
 		end
@@ -34,6 +35,7 @@ feature -- Initialization
 		do
 			create socket.make_client_by_port (default_peer_port, default_peer_host)
 			socket.connect
+			create last_reply.make_empty
 		ensure
 			is_connected: socket.is_connected
 		end
@@ -138,7 +140,7 @@ feature -- Redis Protocol
 			end
 		end
 
-	read_bulk_reply: STRING
+	read_bulk_reply: detachable STRING
 			--A bulk reply is a binary-safe reply that is used to return a binary safe single string value
 			--(string is not limited to alphanumerical strings, it may contain binary data of any kind).
 			--Client libraries will usually return a string as return value of Redis commands returning bulk replies.
@@ -172,10 +174,9 @@ feature -- Redis Protocol
 		local
 			l_string: STRING
 			l_bytes: INTEGER
-			l_return: ARRAYED_LIST [detachable STRING]
 		do
 				-- TODO clean this code
-			create l_return.make (10)
+			create {ARRAYED_LIST[detachable STRING]}Result.make (10)
 			socket.read_line
 			l_string := socket.last_string
 			check_valid_response (l_string)
@@ -193,15 +194,14 @@ feature -- Redis Protocol
 						if not l_string.has_substring (null_response) then
 							l_bytes := (l_string.substring (2, l_string.count - 1)).to_integer
 							socket.read_stream_thread_aware (l_bytes)
-							l_return.force (socket.last_string)
+							Result.force (socket.last_string)
 							socket.read_line
 						else
 								-- TODO check
-								l_return.force (Void)
+							Result.force (Void)
 						end
 					end
 				end
-				Result := l_return
 			end
 		end
 
@@ -375,7 +375,7 @@ feature -- Redis Connection Handling
 			check_reply (l_reply)
 		end
 
-	echo (a_message: STRING): STRING
+	echo (a_message: STRING): detachable STRING
 			--Echo the given string
 		require
 			is_connected: is_connected
@@ -544,7 +544,7 @@ feature -- Redis Commands Keys
 			Result := read_multi_bulk_reply
 		end
 
-	randomkey: STRING
+	randomkey: detachable STRING
 			--Time complexity: O(1)
 			--Return a randomly selected key from the currently selected DB.
 		require
@@ -740,7 +740,7 @@ feature -- Redis Commands Operating on Strings
 			Result := read_integer_reply
 		end
 
-	getset (a_key: STRING; a_value: STRING): STRING
+	getset (a_key: STRING; a_value: STRING): detachable STRING
 			--Time complexity: O(1)
 			--GETSET is an atomic set this value and return the old value command.
 			--Set key to the string value and return the old value stored at key.
@@ -759,7 +759,7 @@ feature -- Redis Commands Operating on Strings
 			Result := read_bulk_reply
 		end
 
-	get (a_key: STRING): STRING
+	get (a_key: STRING): detachable STRING
 			-- Get the value of the specified key.
 			-- If the key does not exist the special value 'Void' is returned.
 			-- If the value stored at key is not a string an error is returned because GET can only handle string values.
@@ -887,7 +887,7 @@ feature -- Redis Commands Operating on Strings
 			Result := read_integer_reply
 		end
 
-	substr (a_key: STRING; a_start: INTEGER; an_end: INTEGER): STRING
+	substr (a_key: STRING; a_start: INTEGER; an_end: INTEGER): detachable STRING
 			--Time complexity: O(start+n) (with start being the start index
 			--and n the total length of the requested range).
 			--Note that the lookup part of this command is O(1) so for
@@ -1030,7 +1030,7 @@ feature -- Redis Commands Operating on Lists
 			valid_status: not has_error
 		end
 
-	lindex (a_key: STRING; an_index: INTEGER): STRING
+	lindex (a_key: STRING; an_index: INTEGER): detachable STRING
 			--Time complexity: O(n) (with n being the length of the list)
 			--Return the specified element of the list stored at the specified key.
 			--0 is the first element, 1 the second and so on.
@@ -1092,7 +1092,7 @@ feature -- Redis Commands Operating on Lists
 			valid_response: Result >= 0
 		end
 
-	lpop (a_key: STRING): STRING
+	lpop (a_key: STRING): detachable STRING
 			--Time complexity: O(1)
 			--Atomically return and remove the first (LPOP)  element of the list.
 			--For example if the list contains the elements "a","b","c" LPOP will return "a" and the list will become "b","c".
@@ -1109,7 +1109,7 @@ feature -- Redis Commands Operating on Lists
 			Result := read_bulk_reply
 		end
 
-	rpop (a_key: STRING): STRING
+	rpop (a_key: STRING): detachable STRING
 			--Time complexity: O(1)
 			--Atomically return and remove the last (RPOP)  element of the list.
 			--For example if the list contains the elements "a","b","c" RPOP will return "c" and the list will become "a","b".
@@ -1166,7 +1166,7 @@ feature -- Redis Commands Operating on Lists
 			Result := read_multi_bulk_reply
 		end
 
-	rpoplpush (a_src_key: STRING; a_dest_key: STRING): STRING
+	rpoplpush (a_src_key: STRING; a_dest_key: STRING): detachable STRING
 		require
 			valid_src_key: a_src_key /= Void
 			valid_dest_key: a_dest_key /= Void
@@ -1227,7 +1227,7 @@ feature -- Redis Commands Operating on Sets
 			valid_response: Result >= 0
 		end
 
-	spop, set_pop (a_key: STRING): STRING
+	spop, set_pop (a_key: STRING): detachable STRING
 			--	Time complexity O(1)
 			--  Remove a random element from a Set returning it as return value.
 			--  If the Set is empty or the key does not exist, a nil object is returned.
@@ -1412,7 +1412,7 @@ feature -- Redis Commands Operating on Sets
 			Result := read_multi_bulk_reply
 		end
 
-	srandmember (a_key: STRING): STRING
+	srandmember (a_key: STRING): detachable STRING
 			--Time complexity O(1)
 			--Return a random element from a Set, without removing the element.
 			--If the Set is empty or the key does not exist, a nil object is returned.
@@ -1479,7 +1479,7 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			Result_0_or_1: Result = 1 or else Result = 0
 		end
 
-	zincrby (a_key: STRING; an_increment: DOUBLE; a_value: STRING): STRING
+	zincrby (a_key: STRING; an_increment: DOUBLE; a_value: STRING): detachable STRING
 			--Time complexity O(log(N)) with N being the number of elements in the sorted set
 			--If member already exists in the sorted set adds the increment to its score and
 			--updates the position of the element in the sorted set accordingly.
@@ -1826,7 +1826,7 @@ feature -- Redis Commands Operating on ZSets (sorted sets)
 			Response: Result >= 0
 		end
 
-	zscore (a_key: STRING; an_element: STRING): STRING
+	zscore (a_key: STRING; an_element: STRING): detachable STRING
 			--Time complexity O(1)
 			--Return the score of the specified element of the sorted set at key.
 			--If the specified element does not exist in the sorted set, or the key does not exist at all,
@@ -2124,7 +2124,7 @@ feature -- Redis Commands Operating on HASHES
 			Response: Result = 1 or Result = 0
 		end
 
-	hget (a_key: STRING; a_field: STRING): STRING
+	hget (a_key: STRING; a_field: STRING): detachable STRING
 			--Time complexity: O(1)
 			--If key holds a hash, retrieve the value associated to the specified field.
 			--If the field is not found or the key does not exist, a special 'nil' value is returned.
@@ -2379,7 +2379,7 @@ feature -- Redis Server Command
 				--for all db's redis.db_size = 0
 		end
 
-	info: STRING
+	info: detachable STRING
 		require
 			is_connected: is_connected
 		local

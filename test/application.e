@@ -25,7 +25,6 @@ feature {NONE} -- Initialization
 --		 print ("%Ntesting commands common %N")
 --		 test_redis_commands_commons_and_string
 		 create r.make_client_by_port (port, host)
-		 print ("%N" + r.info)
 		end
 
 

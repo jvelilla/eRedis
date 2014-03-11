@@ -821,19 +821,19 @@ feature -- Redis Operations on Sets
 	test_srandmember
 		--SRANDMEMBER 	key 						
 		--Return a random member of the Set value at key
-		local
-
-			l_result : STRING
 		do
 			--Set Key= [a,b,c]
 			assert("Expected 1", 1=redis.sadd ("key", "a"))
 			assert("Expected 1", 1=redis.sadd ("key", "b"))
 			assert("Expected 1", 1=redis.sadd ("key", "c"))
 
-			l_result := redis.srandmember("key")
-			assert("Expected is member", redis.sismember ("key", l_result))
-			assert ("Expected 1", 1= redis.srem ("key", l_result))
-			assert("Expected not is member", not redis.sismember ("key", l_result))
+			if attached redis.srandmember("key") as l_result then
+				assert("Expected is member", redis.sismember ("key", l_result))
+				assert ("Expected 1", 1= redis.srem ("key", l_result))
+				assert("Expected not is member", not redis.sismember ("key", l_result))
+			else
+				assert ("Failed:test_srandmember", False)
+			end
 		end
 
 feature	-- Sorted Sets
@@ -1399,7 +1399,7 @@ feature -- Remote Server Controls
 			l_result : LIST [detachable STRING]
 		do
 			l_result := redis.config_get ("*")
-			assert("Expected 16 elements", l_result.count = 16)
+			assert("Expected 98 elements", l_result.count = 98)
 		end
 
 	test_config_get_maxmemory
