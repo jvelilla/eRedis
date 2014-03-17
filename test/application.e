@@ -16,7 +16,7 @@ feature {NONE} -- Initialization
 
 	r: REDIS_API
 	port : INTEGER = 6379
-	host : STRING =  "192.168.211.241"
+	host : STRING =  "127.0.0.1"
 	make
 			-- Run application.
 		do
@@ -25,7 +25,6 @@ feature {NONE} -- Initialization
 --		 print ("%Ntesting commands common %N")
 --		 test_redis_commands_commons_and_string
 		 create r.make_client_by_port (port, host)
-		 print ("%N" + r.info)
 		end
 
 
@@ -34,7 +33,7 @@ feature {NONE} -- Initialization
 		local
 			redis: REDIS_API
 			params : HASH_TABLE [STRING_8, STRING_8]
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 			l_number_keys : INTEGER
 			i : INTEGER
 		do

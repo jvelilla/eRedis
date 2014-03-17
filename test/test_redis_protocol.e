@@ -5,7 +5,9 @@
 	author: "EiffelStudio test wizard"
 	date: "$Date$"
 	revision: "$Revision$"
-	testing: "type/manual"
+	test: "type/manual"
+	testing:"execution/serial"
+
 
 class
 	TEST_REDIS_PROTOCOL
@@ -36,7 +38,7 @@ feature -- Test routines
 		local
 			redis: REDIS_API
 			params : HASH_TABLE [STRING_8, STRING_8]
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 			l_number_keys : INTEGER
 			i : INTEGER
 		do
@@ -141,7 +143,7 @@ feature -- Test routines
 	testing_lrange
 		local
 			redis : REDIS_API
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			create redis.make
 			redis.flush_all
@@ -353,7 +355,7 @@ feature -- Test routines
 		local
 
 			redis : REDIS_API
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			create redis.make
 			redis.flush_all
@@ -421,7 +423,7 @@ feature -- Test routines
 		local
 
 			redis : REDIS_API
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			create redis.make
 			redis.flush_all
@@ -464,7 +466,7 @@ feature -- Test routines
 		local
 
 			redis : REDIS_API
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			create redis.make
 			redis.flush_all
@@ -511,7 +513,7 @@ feature -- Test routines
 		local
 
 			redis : REDIS_API
-			l_result : LIST[STRING]
+			l_result : LIST[detachable STRING]
 		do
 			create redis.make
 			redis.flush_all
@@ -535,7 +537,6 @@ feature -- Test routines
 		local
 
 			redis : REDIS_API
-			l_result : STRING
 		do
 			create redis.make
 			redis.flush_all
@@ -544,10 +545,13 @@ feature -- Test routines
 			assert("Expected 1", 1=redis.sadd ("key", "b"))
 			assert("Expected 1", 1=redis.sadd ("key", "c"))
 
-			l_result := redis.srandmember("key")
-			assert("Expected is member", redis.sismember ("key", l_result))
-			assert ("Expected 1", 1= redis.srem ("key", l_result))
-			assert("Expected not is member", not redis.sismember ("key", l_result))
+			if attached redis.srandmember("key") as l_result then
+				assert("Expected is member", redis.sismember ("key", l_result))
+				assert ("Expected 1", 1= redis.srem ("key", l_result))
+				assert("Expected not is member", not redis.sismember ("key", l_result))
+			else
+				assert("Failed:testing_srandmember", False)
+			end
 		end
 
 
